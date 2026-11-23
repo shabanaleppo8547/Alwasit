@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/arabic_text.dart';
 import '../../core/time_format.dart';
 import '../../models/academic_year.dart';
 import '../../models/lecture.dart';
@@ -43,7 +44,7 @@ class LectureCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      l.subjectName,
+                      bidiSafe(l.subjectName),
                       style: text.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.ink,

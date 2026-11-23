@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app_scope.dart';
+import '../../core/arabic_text.dart';
 import '../../core/time_format.dart';
 import '../../models/academic_year.dart';
 import '../../models/lecture.dart';
@@ -46,7 +47,7 @@ class _LectureFormScreenState extends State<LectureFormScreen> {
       AcademicYears.shortName(s.year),
       if (s.departmentName != null) s.departmentName!,
     ].join(' – ');
-    return '${s.name}  ($scope)';
+    return '${bidiSafe(s.name)}  ($scope)';
   }
 
   Future<int?> _pickTime(int? current, int fallback) async {

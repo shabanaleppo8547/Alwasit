@@ -23,7 +23,7 @@ void main() {
   test('رسالة الأربعاء لجميع السنوات من البيانات الحقيقية', () {
     final wed = ScheduleFilter.apply(
         snap.lectures, const ScheduleQuery(day: WeekDay.wednesday));
-    final msg = ShareMessageBuilder.build(
+    final raw = ShareMessageBuilder.build(
       lectures: wed,
       day: WeekDay.wednesday,
       audience: 'لجميع السنوات',
@@ -32,6 +32,7 @@ void main() {
       allGroupsLabel: ScopeText.groupsJoined(snap.groups),
       now: DateTime(2026, 11, 25, 18),
     );
+    final msg = raw.replaceAll('\u200E', '');
     expect(msg, contains('*🕒 2:30 - 4:00:*\n\n*∆ النمذجة الرياضية (سنة رابعة، تطبيقية)*'));
     expect(msg, contains('*🕒 4:00 - 7:00:*\n\n*∆ البرمجة بلغة C++ (سنة ثالثة)*'));
   });

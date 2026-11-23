@@ -73,8 +73,8 @@ class _ConcurrentGroup extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   count == 2
-                      ? 'محاضرتان متزامنتان'
-                      : '$count محاضرات متزامنة',
+                      ? 'محاضرتان في وقت متداخل'
+                      : '$count محاضرات متداخلة الأوقات',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: AppColors.concurrent,
                         fontWeight: FontWeight.w700,

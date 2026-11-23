@@ -331,7 +331,7 @@ class _SubjectsTab extends StatelessWidget {
                       ),
                       child: ListTile(
                         onTap: () => open(s),
-                        title: Text(s.name,
+                        title: Text(bidiSafe(s.name),
                             style: const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text([
                           'الأستاذ ${s.teacherName}',

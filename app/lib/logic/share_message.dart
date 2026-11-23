@@ -1,4 +1,5 @@
 import '../config/app_config.dart';
+import '../core/arabic_text.dart';
 import '../core/time_format.dart';
 import '../models/academic_year.dart';
 import '../models/lecture.dart';
@@ -47,7 +48,7 @@ class ShareMessageBuilder {
         for (final slot in ScheduleFilter.exactSlots(entry.value)) {
           lines.add('🕒 ${formatRangeBare(slot.startMinutes, slot.endMinutes)}:');
           for (final l in slot.lectures) {
-            lines.add('∆ ${l.subjectName}${details(
+            lines.add('∆ ${bidiSafe(l.subjectName)}${details(
               l,
               showYear: showYear,
               showDepartment: showDepartment,

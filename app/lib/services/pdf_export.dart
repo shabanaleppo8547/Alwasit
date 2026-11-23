@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../config/app_config.dart';
+import '../core/arabic_text.dart';
 import '../core/time_format.dart';
 import '../logic/schedule_filter.dart';
 import '../models/academic_year.dart';
@@ -200,7 +201,7 @@ class PdfExport {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(l.subjectName,
+                pw.Text(bidiSafe(l.subjectName),
                     style: pw.TextStyle(
                         fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 2),

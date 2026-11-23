@@ -1,3 +1,4 @@
+import 'package:alwasit_center/core/arabic_text.dart';
 import 'package:alwasit_center/logic/schedule_filter.dart';
 import 'package:alwasit_center/logic/share_message.dart';
 import 'package:alwasit_center/models/week_day.dart';
@@ -26,7 +27,7 @@ void main() {
       now: _evening,
     );
     expect(
-      msg,
+      msg.replaceAll('\u200E', ''),
       '*مساء الخير جميعاً😍*\n\n'
       '*🟡 مواعيد يوم الأربعاء*\n\n'
       '*لجميع السنوات*\n\n'
@@ -38,6 +39,12 @@ void main() {
       '*∆ البرمجة بلغة C++ (سنة ثالثة)*\n\n'
       '*بالتوفيق للجميع❤️*',
     );
+  });
+
+  test('C++ لا تنقلب داخل النص العربي', () {
+    expect(bidiSafe('البرمجة بلغة C++'), 'البرمجة بلغة C++\u200E');
+    expect(bidiSafe(bidiSafe('C#')), 'C#\u200E');
+    expect(bidiSafe('البرمجة بلغة بايثون'), 'البرمجة بلغة بايثون');
   });
 
   test('صباحًا تتغير التحية', () {

@@ -1,13 +1,580 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>خادم مركز الوسيط</title>
-<style>body{font-family:system-ui,sans-serif;background:#14213D;color:#fff;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center}
-main{padding:24px;max-width:420px}h1{color:#E3A72F;margin:.2em 0}#s{margin-top:16px;padding:12px;border-radius:12px;background:#ffffff14}</style></head>
-<body><main><div style="font-size:56px">👑</div><h1>خادم مركز الوسيط</h1>
-<p>هذا الخادم يغذّي تطبيق المركز بمواعيد المحاضرات.</p><div id="s">جارٍ الفحص…</div></main>
-<script>
-fetch('/api/schedule',{cache:'no-store'}).then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{
-document.getElementById('s').textContent = ok ? '✅ يعمل — عدد المحاضرات: '+j.lectures.length : '⚠️ '+(j.error||'خطأ');
-}).catch(()=>{document.getElementById('s').textContent='⚠️ تعذّر الاتصال';});
-</script></body></html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14213D">
+<title>👑 مركز الوسيط 👑</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+<style>
+:root{--navy:#14213D;--navy2:#233457;--gold:#E3A72F;--goldsoft:#FFF1D0;--paper:#F7F4EE;--ink:#1B2333;--muted:#5F6B7E;--line:#E3DED3;--green:#1FA855;--tg:#229ED9;--fb:#1877F2;--red:#C0392B;--teal:#2E7D6B}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,"Segoe UI",Tahoma,"Noto Naskh Arabic","Noto Sans Arabic",sans-serif}
+button,input,select,textarea{font:inherit}
+a{color:inherit}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px}
+header.top{background:var(--navy);color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px #0003}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:58px}
+.brand h1{margin:0;font-size:21px;font-weight:800;white-space:nowrap}
+.brand .tools{display:flex;gap:6px}
+.iconbtn{background:#ffffff14;border:0;color:#fff;border-radius:10px;min-width:40px;height:40px;cursor:pointer;font-size:18px;padding:0 10px}
+.iconbtn:focus-visible,.pill:focus-visible,.btn:focus-visible,.tab:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.tab{flex:none;background:transparent;border:0;color:#ffffffc0;padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:700;text-decoration:none;white-space:nowrap}
+.tab[aria-current="page"]{background:var(--gold);color:var(--navy)}
+main{padding:12px 0 110px}
+.search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 12px;margin:10px 0 4px}
+.search input{flex:1;border:0;outline:0;min-height:46px;background:transparent}
+.row{display:flex;gap:8px;overflow-x:auto;padding:6px 0;scrollbar-width:thin}
+.pill{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:600;white-space:nowrap;color:var(--ink)}
+.pill[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.pill.gold[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--navy)}
+.daytile{display:flex;flex-direction:column;align-items:center;min-width:78px;border-radius:14px;padding:6px 10px;line-height:1.3}
+.daytile small{font-size:12px;opacity:.85}
+.daytile.today{border:2px solid var(--gold)}
+.scope{color:var(--muted);font-size:14px;margin:10px 4px 0}
+.dayhead{display:flex;align-items:center;gap:10px;margin:18px 4px 8px}
+.dayhead:before{content:"";width:6px;height:26px;border-radius:3px;background:var(--gold)}
+.dayhead h2{margin:0;font-size:21px}
+.dayhead .muted{font-size:14px}
+.badge{background:var(--goldsoft);color:var(--navy);border-radius:8px;padding:0 8px;font-weight:700;font-size:13px}
+.muted{color:var(--muted)}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.lec{display:flex;margin-bottom:10px}
+.lec .time{flex:none;width:96px;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;text-align:center}
+.lec .time b{color:var(--gold);font-size:15px}
+.lec .time i{display:block;width:2px;height:10px;background:#ffffff40;margin:3px 0}
+.lec .time span{font-size:13px;color:#ffffffc0}
+.lec .body{flex:1;padding:10px 14px;min-width:0}
+.lec .body h3{margin:0;font-size:17px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:12.5px;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:1px 8px}
+.tag.strong{background:var(--goldsoft);border-color:var(--gold);font-weight:700}
+.lec .acts{display:flex;flex-direction:column;gap:4px;padding:8px}
+.concurrent{border:1px solid #2E7D6B66;background:#2E7D6B0f;border-radius:20px;padding:8px 8px 0;margin-bottom:10px}
+.concurrent>.lbl{color:var(--teal);font-weight:700;font-size:14px;margin:0 6px 6px}
+.empty{text-align:center;padding:48px 16px;color:var(--muted)}
+.empty .big{font-size:44px}
+.fab{position:fixed;inset-inline:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--paper) 30%);z-index:15}
+.fab .wrap{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:46px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.green{background:var(--green);color:#fff}.btn.navy{background:var(--navy);color:#fff}.btn.tg{background:var(--tg);color:#fff}.btn.fb{background:var(--fb);color:#fff}
+.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--navy)}.btn.danger{background:var(--red);color:#fff}
+.btn.block{width:100%}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.subject{padding:16px;display:flex;flex-direction:column;gap:6px}
+.subject h3{margin:0;font-size:18px}
+.soon{font-size:13px;color:var(--muted);text-align:center}
+.teacher{padding:16px}
+.teacher h3{margin:0 0 10px;font-size:19px}
+.teacher .btns{display:grid;gap:8px}
+dialog{border:0;border-radius:18px;padding:0;width:min(560px,94vw);max-height:90vh;box-shadow:0 20px 60px #0005}
+dialog::backdrop{background:#0008}
+.dlg{padding:18px;display:flex;flex-direction:column;gap:10px;max-height:90vh;overflow:auto}
+.dlg h2{margin:0;font-size:19px}
+.preview{white-space:pre-wrap;background:#E7F7EC;border:1px solid #BFE5CB;border-radius:12px;padding:12px;max-height:45vh;overflow:auto;font-size:14.5px}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:14px}
+label.f input,label.f select,label.f textarea,.ltr{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;font-weight:400;width:100%}
+.ltr,input[type=url],input[type=tel]{direction:ltr;text-align:left}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.box{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;display:flex;flex-direction:column;gap:8px}
+.check{display:flex;gap:8px;align-items:center;font-size:14px}
+.toast{position:fixed;bottom:90px;inset-inline:16px;margin:auto;max-width:520px;background:var(--ink);color:#fff;border-radius:12px;padding:12px 16px;z-index:50;box-shadow:0 8px 30px #0005}
+.toast.err{background:var(--red)}
+.banner{border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px;background:#fdecea;border:1px solid #f5c6c2}
+.admin-list .item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.admin-list .item:last-child{border-bottom:0}
+.admin-list .item .grow{flex:1;min-width:0}
+.small{font-size:13px}
+#print-area{display:none}
+@media (max-width:560px){.brand h1{font-size:18px}.lec .time{width:84px}}
+@media print{
+  @page{size:A4;margin:14mm}
+  body{background:#fff}
+  body>*:not(#print-area){display:none!important}
+  #print-area{display:block;color:#000}
+  .p-head{background:var(--navy)!important;color:#fff!important;border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .p-head h1{margin:0;font-size:22px}.p-head p{margin:4px 0 0;color:var(--gold)!important;font-size:13px}
+  .p-day{break-inside:avoid;break-after:avoid;margin:12px 0 4px;font-weight:800;font-size:15px;border-right:4px solid var(--gold);padding-right:8px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{border:1px solid #ccc;padding:6px 8px;text-align:right;vertical-align:top}
+  th{background:#f3f0ea!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr{break-inside:avoid}
+  thead{display:table-header-group}
+  .p-foot{margin-top:10px;font-size:11px;color:#555}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>👑 مركز الوسيط 👑</h1>
+      <div class="tools">
+        <button class="iconbtn" id="refresh" title="تحديث البيانات" aria-label="تحديث البيانات">⟳</button>
+        <a class="iconbtn" href="#admin" title="لوحة الإدارة" aria-label="لوحة الإدارة" style="display:grid;place-items:center;text-decoration:none">🔐</a>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="الأقسام">
+      <a class="tab" href="#schedule" data-tab="schedule">📅 المواعيد</a>
+      <a class="tab" href="#online" data-tab="online">🎥 الحضور أونلاين</a>
+      <a class="tab" href="#contact" data-tab="contact">📞 التواصل مع الأساتذة</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="app"><div class="empty"><div class="big">⏳</div>جارٍ تحميل الجدول…</div></main>
+<div class="fab" id="fab" hidden><div class="wrap">
+  <button class="btn green" id="shareBtn">💬 مشاركة عبر واتساب</button>
+  <button class="btn navy" id="pdfBtn">📄 تصدير PDF</button>
+</div></div>
+<dialog id="dlg"></dialog>
+<div id="print-area"></div>
+
+<script type="module">
+import * as L from './logic.js';
+
+// ======================= الحالة =======================
+const CACHE_KEY = 'alwasit_cache_v2', TOKEN_KEY = 'alwasit_admin_token_v1';
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch{ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch{} },
+  del(k){ try{ localStorage.removeItem(k); }catch{} },
+};
+const S = {
+  data: null, stale: false, error: null, loading: false,
+  q: { day: L.DAYS[(new Date().getDay() + 1) % 7][0], year: null, groupId: null, departmentId: null, text: '' },
+  o: { year: null, groupId: null, departmentId: null, text: '' },
+  adminTab: 'lectures', adminDay: null, adminYear: null,
+};
+const todayKey = L.DAYS[(new Date().getDay() + 1) % 7][0]; // getDay: الأحد=0 ← السبت أول الأسبوع
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const nm = (s) => esc(L.bidi(s));
+const nameOf = (list, id) => list.find((x) => x.id === id)?.name ?? null;
+
+function toast(msg, err = false){
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div');
+  t.className = 'toast' + (err ? ' err' : ''); t.setAttribute('role','status'); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 3000);
+}
+
+// ======================= الاتصال بالخادم =======================
+async function api(path, body){
+  const token = store.get(TOKEN_KEY);
+  let res;
+  try{
+    res = await fetch(path, body ? {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', ...(token && body.action !== 'login' ? { Authorization: 'Bearer ' + token } : {}) },
+      body: JSON.stringify(body),
+    } : { cache: 'no-store' });
+  }catch{ throw new Error('تعذّر الاتصال بالإنترنت. تأكد من الشبكة ثم حاول مجددًا.'); }
+  let json = null; try{ json = await res.json(); }catch{}
+  if (!res.ok){
+    if (res.status === 401 && body && body.action !== 'login') store.del(TOKEN_KEY);
+    throw new Error(json?.error || `تعذّر إتمام الطلب (${res.status}).`);
+  }
+  return json;
+}
+
+async function load(){
+  if (S.loading) return; S.loading = true; S.error = null; render();
+  try{
+    S.data = await api('/api/schedule'); S.stale = false;
+    store.set(CACHE_KEY, JSON.stringify(S.data));
+  }catch(e){
+    S.error = e.message;
+    if (!S.data){ const c = store.get(CACHE_KEY); if (c){ try{ S.data = JSON.parse(c); }catch{} } }
+    if (S.data) S.stale = true;
+  }finally{ S.loading = false; render(); }
+}
+
+// ======================= عناصر مشتركة =======================
+const pill = (label, on, attrs, gold = false) =>
+  `<button class="pill${gold ? ' gold' : ''}" aria-pressed="${on}" ${attrs}>${esc(label)}</button>`;
+
+function scopeRows(st, prefix){
+  const d = S.data;
+  let h = `<div class="row">${pill('جميع السنوات', !st.year, `data-${prefix}-year=""`)}${
+    L.YEARS.map((y) => pill(L.yearName(y), st.year === y, `data-${prefix}-year="${y}"`)).join('')}</div>`;
+  if (L.yearHasGroups(d, st.year)){
+    h += `<div class="row">${pill('جميع الفئات', !st.groupId, `data-${prefix}-group=""`, true)}${
+      d.groups.map((g) => pill('الفئة ' + g.name, st.groupId === g.id, `data-${prefix}-group="${esc(g.id)}"`, true)).join('')}</div>`;
+  }
+  if (st.year === L.YEAR_WITH_DEPARTMENTS){
+    h += `<div class="row">${pill('جميع الأقسام', !st.departmentId, `data-${prefix}-dept=""`, true)}${
+      d.departments.map((x) => pill('قسم ' + x.name, st.departmentId === x.id, `data-${prefix}-dept="${esc(x.id)}"`, true)).join('')}</div>`;
+  }
+  return h;
+}
+
+function setYear(st, y){
+  st.year = y;
+  if (!L.yearHasGroups(S.data, y)) st.groupId = null;
+  if (y !== L.YEAR_WITH_DEPARTMENTS) st.departmentId = null;
+}
+
+function lectureCard(l, { showYear, actions = '' }){
+  const tags = [];
+  if (showYear) tags.push(`<span class="tag">${esc(L.yearName(l.year))}</span>`);
+  if (l.groupName) tags.push(`<span class="tag strong">الفئة ${esc(l.groupName)}</span>`);
+  else if (l.year === L.YEAR_WITH_GROUPS) tags.push(`<span class="tag">مشتركة بين الفئات</span>`);
+  if (l.departmentName) tags.push(`<span class="tag">قسم ${esc(l.departmentName)}</span>`);
+  else if (l.year === L.YEAR_WITH_DEPARTMENTS) tags.push(`<span class="tag">كل الأقسام</span>`);
+  return `<div class="card lec">
+    <div class="time"><b>${L.time12(l.start)}</b><i></i><span>${L.time12(l.end)}</span></div>
+    <div class="body"><h3>${nm(l.subjectName)}</h3>
+      <div class="muted">👤 ${esc(l.teacherName)}</div>
+      <div class="tags">${tags.join('')}</div>
+      ${l.notes ? `<div class="muted small">${esc(l.notes)}</div>` : ''}</div>
+    ${actions ? `<div class="acts">${actions}</div>` : ''}
+  </div>`;
+}
+
+function timeline(list, opts){
+  return L.overlapClusters(list).map((c) => c.length === 1 ? lectureCard(c[0], opts)
+    : `<div class="concurrent"><div class="lbl">⇄ ${c.length === 2 ? 'محاضرتان في وقت متداخل' : c.length + ' محاضرات متداخلة الأوقات'}</div>${c.map((l) => lectureCard(l, opts)).join('')}</div>`).join('');
+}
+
+const countLabel = (n) => n === 0 ? 'لا محاضرات' : n === 1 ? 'محاضرة واحدة' : n === 2 ? 'محاضرتان' : n <= 10 ? `${n} محاضرات` : `${n} محاضرة`;
+
+function audienceText(){
+  const q = S.q, d = S.data;
+  return L.audience({ year: q.year, groupName: nameOf(d.groups, q.groupId), departmentName: nameOf(d.departments, q.departmentId),
+    hasGroups: L.yearHasGroups(d, q.year), text: q.text });
+}
+const scheduleTitle = () => `مواعيد ${L.daysText(S.q.day)} – ${audienceText()}`;
+const visible = () => L.filterLectures(S.data.lectures, S.q);
+
+// ======================= المواعيد =======================
+function viewSchedule(){
+  const d = S.data, q = S.q;
+  const all = L.filterLectures(d.lectures, { ...q, day: null });
+  const counts = Object.fromEntries(L.DAYS.map(([k]) => [k, all.filter((l) => l.day === k).length]));
+  const list = visible();
+  let h = `<div class="search">🔎<input id="q" type="search" placeholder="ابحث عن مادة أو أستاذ" value="${esc(q.text)}" aria-label="بحث"></div>`;
+  h += scopeRows(q, 's');
+  h += `<div class="row"><button class="pill daytile" aria-pressed="${!q.day}" data-s-day=""><span>جميع الأيام</span><small>${all.length}</small></button>${
+    L.DAYS.map(([k, n]) => `<button class="pill daytile${k === todayKey ? ' today' : ''}" aria-pressed="${q.day === k}" data-s-day="${k}"><span>${n}</span><small>${k === todayKey ? 'اليوم · ' : ''}${counts[k]}</small></button>`).join('')}</div>`;
+  h += `<p class="scope">${esc(scheduleTitle())} · ${countLabel(list.length)}</p>`;
+  if (!list.length) return h + `<div class="empty"><div class="big">📭</div>${L.EMPTY_TEXT}<br><span class="small">جرّب يومًا آخر أو غيّر السنة أو الفئة أو القسم.</span></div>`;
+  for (const [day, items] of L.byDay(list)){
+    h += `<div class="dayhead"><h2>${L.DAY_NAME[day]}</h2>${day === todayKey ? '<span class="badge">اليوم</span>' : ''}<span class="muted">${countLabel(items.length)}</span></div>`;
+    h += timeline(items, { showYear: !q.year });
+  }
+  return h;
+}
+
+function shareText(){
+  const q = S.q;
+  return L.shareMessage({ lectures: visible(), day: q.day, audienceText: audienceText(), showYear: !q.year,
+    showDepartment: !q.departmentId, allGroupsLabel: S.data.groups.map((g) => g.name).join(' و') });
+}
+
+function openShare(){
+  const msg = shareText();
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<div class="dlg"><h2>مشاركة الجدول</h2><div class="muted small">${esc(scheduleTitle())}</div>
+    <div class="preview">${esc(msg)}</div>
+    <a class="btn green block" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">💬 إرسال عبر واتساب</a>
+    <div class="two"><button class="btn ghost" id="copyMsg">📋 نسخ النص</button><button class="btn navy" id="toPdf">📄 ملف PDF</button></div>
+    <button class="btn ghost" data-close>إغلاق</button></div>`;
+  dlg.showModal();
+  $('#copyMsg').onclick = async () => { try{ await navigator.clipboard.writeText(msg); toast('تم نسخ الرسالة'); }catch{ toast('تعذّر النسخ، حدّد النص يدويًا', true); } };
+  $('#toPdf').onclick = () => { dlg.close(); exportPdf(); };
+}
+
+function exportPdf(){
+  const q = S.q, list = visible(), title = scheduleTitle(), now = new Date();
+  const showYear = !q.year, showDept = !q.departmentId, allG = S.data.groups.map((g) => g.name).join(' و');
+  let h = `<div class="p-head"><h1>👑 مركز الوسيط 👑</h1><p>${esc(title)}</p></div>`;
+  if (!list.length) h += `<p style="text-align:center;margin:40px 0">${L.EMPTY_TEXT}</p>`;
+  for (const [day, items] of L.byDay(list)){
+    h += `<div class="p-day">يوم ${L.DAY_NAME[day]} (${items.length})</div><table><thead><tr><th style="width:24%">الوقت</th><th>المادة</th><th style="width:28%">السنة / الفئة / القسم</th><th style="width:18%">الأستاذ</th></tr></thead><tbody>${
+      items.map((l) => {
+        const scope = [showYear ? L.yearName(l.year) : '', l.groupName ? 'الفئة ' + l.groupName : (l.year === L.YEAR_WITH_GROUPS ? 'مشتركة ' + allG : ''),
+          showDept && l.departmentName ? 'قسم ' + l.departmentName : ''].filter(Boolean).join('، ');
+        return `<tr><td>${L.range12(l.start, l.end)}</td><td><b>${nm(l.subjectName)}</b>${l.notes ? `<br><small>${esc(l.notes)}</small>` : ''}</td><td>${esc(scope || '—')}</td><td>${esc(l.teacherName)}</td></tr>`;
+      }).join('')}</tbody></table>`;
+  }
+  h += `<div class="p-foot">تاريخ الإصدار: ${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}</div>`;
+  $('#print-area').innerHTML = h;
+  const old = document.title; document.title = `مركز الوسيط - ${title}`;
+  toast('اختر «حفظ بتنسيق PDF» من نافذة الطباعة، ثم شارك الملف.');
+  setTimeout(() => { window.print(); document.title = old; }, 300);
+}
+
+// ======================= الحضور أونلاين =======================
+function viewOnline(){
+  const d = S.data, o = S.o;
+  const list = L.filterSubjects(d.subjects, o);
+  let h = `<p class="muted">🎥 اختر سنتك وفئتك أو قسمك، ثم ادخل إلى قناة المادة على تيليغرام.</p>
+    <div class="search">🔎<input id="oq" type="search" placeholder="ابحث عن مادة" value="${esc(o.text)}" aria-label="بحث عن مادة"></div>`;
+  h += scopeRows(o, 'o');
+  if (!list.length) return h + `<div class="empty"><div class="big">📚</div>${o.text ? 'لا توجد مادة بهذا الاسم' : 'لا توجد مواد هنا بعد'}</div>`;
+  h += '<div class="grid" style="margin-top:10px">';
+  for (const s of list){
+    const ch = L.channelsFor(s, o.groupId);
+    const scope = [L.yearName(s.year), s.departmentName ? 'قسم ' + s.departmentName : ''].filter(Boolean).join(' · ');
+    h += `<div class="card subject"><h3>${nm(s.name)}</h3><div class="muted small">${esc(scope)}</div><div>👤 الأستاذ ${esc(s.teacherName)}</div>`;
+    if (!ch.length) h += `<button class="btn tg" disabled>✈️ الانتقال إلى قناة المادة</button><div class="soon">رابط القناة سيُضاف قريبًا</div>`;
+    else h += ch.map((c) => `<a class="btn tg" target="_blank" rel="noopener" href="${esc(c.url)}">✈️ ${
+      o.groupId || !c.groupId || ch.length === 1 ? 'الانتقال إلى قناة المادة' : 'قناة الفئة ' + esc(c.groupName ?? '')}</a>`).join('');
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+// ======================= التواصل =======================
+function viewContact(){
+  const d = S.data;
+  let h = `<p class="muted">📞 اختر الأستاذ ثم وسيلة التواصل.</p><div class="grid">`;
+  for (const t of d.teachers){
+    h += `<div class="card teacher"><h3>👨‍🏫 الأستاذ ${esc(t.name)}</h3><div class="btns">${
+      t.contacts.map((c) => {
+        const label = c.label || L.CONTACT_LABEL[c.type] || 'رابط';
+        if (c.type === 'whatsapp') return `<button class="btn green" data-wa="${esc(c.value)}" data-teacher="${esc(t.name)}">💬 ${esc(label)} (+${esc(c.value)})</button>`;
+        const cls = c.type === 'telegram' ? 'tg' : c.type === 'facebook' ? 'fb' : 'navy';
+        const icon = c.type === 'telegram' ? '✈️' : c.type === 'facebook' ? 'ⓕ' : c.type === 'phone' ? '📞' : '🔗';
+        return `<a class="btn ${cls}" target="_blank" rel="noopener" href="${esc(L.contactHref(c))}">${icon} ${esc(label)}</a>`;
+      }).join('') || '<span class="muted">لا توجد وسائل تواصل مضافة.</span>'}</div></div>`;
+  }
+  return h + '</div>';
+}
+
+function openWhatsAppDraft(number, teacher){
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<div class="dlg"><h2>رسالة إلى الأستاذ ${esc(teacher)}</h2>
+    <label class="f">أكمل الرسالة أو عدّلها:<textarea id="waText" rows="4">${esc(L.DEFAULT_TEACHER_MESSAGE)}</textarea></label>
+    <button class="btn green block" id="waGo">💬 فتح المحادثة في واتساب</button><button class="btn ghost" data-close>إلغاء</button></div>`;
+  dlg.showModal(); const ta = $('#waText'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  $('#waGo').onclick = () => { window.open(L.contactHref({ type: 'whatsapp', value: number }, ta.value.trim()), '_blank', 'noopener'); dlg.close(); };
+}
+
+// ======================= الإدارة =======================
+const isAdmin = () => !!store.get(TOKEN_KEY);
+
+function viewAdmin(){
+  if (!isAdmin()) return `<div class="card" style="max-width:420px;margin:30px auto;padding:20px">
+    <h2 style="margin-top:0">🔐 دخول الإدارة</h2><form id="loginForm" class="dlg" style="padding:0">
+    <label class="f">كلمة مرور الإدارة<input type="password" id="pw" autocomplete="current-password" required class="ltr"></label>
+    <button class="btn navy block">دخول</button></form></div>`;
+  const d = S.data, t = S.adminTab;
+  const tabs = [['lectures','📅 المواعيد'],['subjects','📚 المواد والقنوات'],['teachers','👨‍🏫 الأساتذة'],['lookups','🗂️ الفئات والأقسام']];
+  let h = `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><h2 style="margin:0">لوحة الإدارة</h2><button class="btn ghost" id="logout">خروج</button></div>
+    <div class="row">${tabs.map(([k, n]) => pill(n, t === k, `data-atab="${k}"`)).join('')}</div>`;
+  if (t === 'lectures'){
+    const list = L.filterLectures(d.lectures, { day: S.adminDay, year: S.adminYear });
+    h += `<div class="row">${pill('جميع الأيام', !S.adminDay, 'data-aday=""', true)}${L.DAYS.map(([k, n]) => pill(n, S.adminDay === k, `data-aday="${k}"`, true)).join('')}</div>
+      <div class="row">${pill('جميع السنوات', !S.adminYear, 'data-ayear=""', true)}${L.YEARS.map((y) => pill(L.yearName(y), S.adminYear === y, `data-ayear="${y}"`, true)).join('')}</div>
+      <p><button class="btn navy" data-edit-lecture="">＋ موعد جديد</button> <span class="muted small">المعروض ${list.length} من ${d.lectures.length}</span></p>`;
+    return h + adminLectureButtons(list);
+  }
+  if (t === 'subjects'){
+    h += `<p><button class="btn navy" data-edit-subject="">＋ مادة جديدة</button></p>`;
+    for (const y of L.YEARS){
+      const ss = L.filterSubjects(d.subjects, { year: y });
+      h += `<h3>${L.yearName(y)}</h3><div class="card admin-list">${ss.length ? ss.map((s) => {
+        const ok = s.channels.filter((c) => c.enabled && c.url).length;
+        return `<div class="item"><div class="grow"><b>${nm(s.name)}</b><div class="muted small">الأستاذ ${esc(s.teacherName)}${s.departmentName ? ' · قسم ' + esc(s.departmentName) : ''} · ${ok ? '✈️ ' + ok + ' رابط قناة' : 'بلا رابط قناة'}</div></div>
+          <button class="btn ghost" data-edit-subject="${esc(s.id)}">تعديل</button><button class="btn danger" data-del-subject="${esc(s.id)}">حذف</button></div>`;
+      }).join('') : '<div class="item muted">لا توجد مواد بعد — جاهزة للإضافة.</div>'}</div>`;
+    }
+    return h;
+  }
+  if (t === 'teachers'){
+    h += `<p class="muted small">حسابات الأساتذة الشخصية (قسم التواصل)، منفصلة عن قنوات المواد.</p><p><button class="btn navy" data-edit-teacher="">＋ أستاذ جديد</button></p><div class="card admin-list">${
+      d.teachers.map((x) => `<div class="item"><div class="grow"><b>${esc(x.name)}</b><div class="muted small">${x.contacts.map((c) => esc(c.label || L.CONTACT_LABEL[c.type])).join('، ') || 'بلا وسائل تواصل'}</div></div>
+        <button class="btn ghost" data-edit-teacher="${esc(x.id)}">تعديل</button><button class="btn danger" data-del-teacher="${esc(x.id)}">حذف</button></div>`).join('')}</div>`;
+    return h;
+  }
+  for (const [kind, label, list] of [['group','الفئات (للسنة الثانية)', d.groups], ['department','أقسام السنة الرابعة', d.departments]]){
+    h += `<h3>${label} <button class="btn ghost" data-add-lookup="${kind}">＋ إضافة</button></h3><div class="card admin-list">${
+      list.map((x) => `<div class="item"><div class="grow"><b>${esc(x.name)}</b></div><button class="btn ghost" data-ren-lookup="${kind}|${esc(x.id)}">تعديل</button><button class="btn danger" data-del-lookup="${kind}|${esc(x.id)}">حذف</button></div>`).join('') || '<div class="item muted">فارغة</div>'}</div>`;
+  }
+  return h;
+}
+
+// قائمة المواعيد للإدارة مجمّعة حسب اليوم، مع أزرار التعديل والحذف.
+function adminLectureButtons(list){
+  if (!list.length) return '<div class="empty">لا توجد مواعيد هنا</div>';
+  let h = '';
+  for (const [day, items] of L.byDay(list)){
+    h += `<div class="dayhead"><h2>${L.DAY_NAME[day]}</h2><span class="muted">${countLabel(items.length)}</span></div><div class="card admin-list">${
+      items.map((l) => `<div class="item"><div class="grow"><b>${nm(l.subjectName)}</b>
+      <div class="muted small">${L.range12(l.start, l.end)} · ${esc(L.yearName(l.year))}${l.groupName ? ' · الفئة ' + esc(l.groupName) : ''}${l.departmentName ? ' · قسم ' + esc(l.departmentName) : ''} · ${esc(l.teacherName)}</div></div>
+      <button class="btn ghost" data-edit-lecture="${esc(l.id)}">تعديل</button><button class="btn danger" data-del-lecture="${esc(l.id)}">حذف</button></div>`).join('')}</div>`;
+  }
+  return h;
+}
+
+async function adminDo(body, okMsg){
+  try{ await api('/api/admin', body); toast(okMsg); await load(); return true; }
+  catch(e){ toast(e.message, true); if (!isAdmin()) render(); return false; }
+}
+
+function subjectLabel(s){ return `${s.name} (${L.yearShort(s.year)}${s.departmentName ? ' – ' + s.departmentName : ''})`; }
+
+function editLecture(id){
+  const d = S.data, l = d.lectures.find((x) => x.id === id);
+  const subjects = [...d.subjects].sort((a, b) => a.year - b.year || a.name.localeCompare(b.name, 'ar'));
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<form class="dlg" id="lf"><h2>${l ? 'تعديل موعد' : 'موعد جديد'}</h2>
+    <label class="f">المادة<select name="subjectId" required><option value="">اختر المادة</option>${subjects.map((s) => `<option value="${esc(s.id)}" ${l?.subjectId === s.id ? 'selected' : ''}>${nm(subjectLabel(s))}</option>`).join('')}</select></label>
+    <label class="f">اليوم<select name="day" required>${L.DAYS.map(([k, n]) => `<option value="${k}" ${(l?.day ?? S.adminDay ?? 'saturday') === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <div class="two"><label class="f">من<input type="time" name="start" required value="${l ? L.toHHMM(l.start) : ''}"></label><label class="f">إلى<input type="time" name="end" required value="${l ? L.toHHMM(l.end) : ''}"></label></div>
+    <label class="f" id="grpWrap">الفئة<select name="groupId"><option value="">مشتركة بين جميع الفئات</option>${d.groups.map((g) => `<option value="${esc(g.id)}" ${l?.groupId === g.id ? 'selected' : ''}>الفئة ${esc(g.name)}</option>`).join('')}</select></label>
+    <label class="f">ملاحظات (اختياري)<input name="notes" value="${esc(l?.notes ?? '')}" placeholder="مثال: القاعة 3"></label>
+    <button class="btn navy block">حفظ</button><button type="button" class="btn ghost" data-close>إلغاء</button></form>`;
+  const f = $('#lf');
+  const syncGroup = () => { const s = d.subjects.find((x) => x.id === f.subjectId.value); $('#grpWrap').hidden = !(s && L.YEARS_ALLOWING_GROUPS.includes(s.year)); };
+  f.subjectId.onchange = syncGroup; syncGroup();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const start = L.fromHHMM(f.start.value), end = L.fromHHMM(f.end.value);
+    if (end <= start) return toast('وقت النهاية يجب أن يكون بعد وقت البداية', true);
+    const ok = await adminDo({ action: 'saveLecture', lecture: { id: l?.id, subjectId: f.subjectId.value, day: f.day.value, start, end,
+      groupId: $('#grpWrap').hidden ? null : (f.groupId.value || null), notes: f.notes.value } }, l ? 'تم حفظ التعديلات' : 'تمت إضافة الموعد');
+    if (ok) dlg.close();
+  };
+  dlg.showModal();
+}
+
+function editSubject(id){
+  const d = S.data, s = d.subjects.find((x) => x.id === id);
+  const ch = (g) => s?.channels.find((c) => (c.groupId ?? '') === g);
+  const chanBox = (g, title) => { const c = ch(g); return `<div class="box" data-chan="${esc(g)}"><b>${esc(title)}</b>
+    <input type="url" class="ltr" placeholder="https://t.me/..." value="${esc(c?.url ?? '')}" data-url>
+    <label class="check"><input type="checkbox" data-en ${c?.enabled === false ? '' : 'checked'}> الرابط مفعّل للطلاب</label></div>`; };
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<form class="dlg" id="sf"><h2>${s ? 'تعديل مادة' : 'مادة جديدة'}</h2>
+    <label class="f">اسم المادة الرسمي<input name="name" required value="${esc(s?.name ?? '')}"></label>
+    <div class="two"><label class="f">السنة<select name="year" required>${L.YEARS.map((y) => `<option value="${y}" ${s?.year === y ? 'selected' : ''}>${L.yearName(y)}</option>`).join('')}</select></label>
+    <label class="f" id="deptWrap">القسم<select name="departmentId"><option value="">مشتركة بين الأقسام</option>${d.departments.map((x) => `<option value="${esc(x.id)}" ${s?.departmentId === x.id ? 'selected' : ''}>قسم ${esc(x.name)}</option>`).join('')}</select></label></div>
+    <label class="f">الأستاذ المسؤول<select name="teacherId" required><option value="">اختر</option>${d.teachers.map((x) => `<option value="${esc(x.id)}" ${s?.teacherId === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+    <b>قنوات تيليغرام للمادة</b><div class="muted small">رابط قناة المادة (وليس حساب الأستاذ). إن تُرك فارغًا يظهر «رابط القناة سيُضاف قريبًا».</div>
+    ${chanBox('', 'القناة المشتركة / قناة المادة')}<div id="grpChans">${d.groups.map((g) => chanBox(g.id, 'قناة خاصة بالفئة ' + g.name + ' (اختياري)')).join('')}</div>
+    <button class="btn navy block">حفظ</button><button type="button" class="btn ghost" data-close>إلغاء</button></form>`;
+  const f = $('#sf');
+  const sync = () => { const y = Number(f.year.value); $('#deptWrap').hidden = y !== L.YEAR_WITH_DEPARTMENTS; $('#grpChans').hidden = !L.YEARS_ALLOWING_GROUPS.includes(y); };
+  f.year.onchange = sync; sync();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const channels = [...f.querySelectorAll('[data-chan]')].filter((b) => !b.closest('[hidden]'))
+      .map((b) => ({ id: ch(b.dataset.chan)?.id, groupId: b.dataset.chan || null, url: b.querySelector('[data-url]').value.trim(), enabled: b.querySelector('[data-en]').checked }))
+      .filter((c) => c.url);
+    const ok = await adminDo({ action: 'saveSubject', subject: { id: s?.id, name: f.name.value, year: Number(f.year.value),
+      departmentId: $('#deptWrap').hidden ? null : (f.departmentId.value || null), teacherId: f.teacherId.value, channels } }, 'تم حفظ المادة');
+    if (ok) dlg.close();
+  };
+  dlg.showModal();
+}
+
+function editTeacher(id){
+  const d = S.data, t = d.teachers.find((x) => x.id === id);
+  const rows = t?.contacts?.length ? t.contacts : [{ type: 'whatsapp', value: '' }, { type: 'telegram', value: '' }, { type: 'facebook', value: '' }];
+  const row = (c) => `<div class="box" data-contact data-id="${esc(c.id ?? '')}"><div class="two">
+    <select data-type>${Object.entries(L.CONTACT_LABEL).map(([k, n]) => `<option value="${k}" ${c.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select>
+    <input class="ltr" data-label placeholder="اسم الوسيلة (اختياري)" value="${esc(c.label ?? '')}"></div>
+    <input class="ltr" data-value placeholder="رقم مع رمز الدولة أو رابط https://" value="${esc(c.value)}">
+    <button type="button" class="btn ghost" data-rm>حذف هذه الوسيلة</button></div>`;
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<form class="dlg" id="tf"><h2>${t ? 'تعديل أستاذ' : 'أستاذ جديد'}</h2>
+    <label class="f">اسم الأستاذ<input name="name" required value="${esc(t?.name ?? '')}"></label>
+    <b>وسائل التواصل</b><div class="muted small">واتساب: الرقم مع رمز الدولة (مثل 963935350049). تيليغرام وفيسبوك: رابط الحساب الشخصي.</div>
+    <div id="rows">${rows.map(row).join('')}</div><button type="button" class="btn ghost" id="addRow">＋ إضافة وسيلة تواصل</button>
+    <button class="btn navy block">حفظ</button><button type="button" class="btn ghost" data-close>إلغاء</button></form>`;
+  const f = $('#tf');
+  $('#addRow').onclick = () => $('#rows').insertAdjacentHTML('beforeend', row({ type: 'other', value: '' }));
+  $('#rows').onclick = (e) => { if (e.target.matches('[data-rm]')) e.target.closest('[data-contact]').remove(); };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const contacts = [...f.querySelectorAll('[data-contact]')].map((b) => ({ id: b.dataset.id || undefined, type: b.querySelector('[data-type]').value,
+      value: b.querySelector('[data-value]').value.trim(), label: b.querySelector('[data-label]').value.trim() || null })).filter((c) => c.value);
+    const ok = await adminDo({ action: 'saveTeacher', teacher: { id: t?.id, name: f.name.value, contacts } }, 'تم حفظ بيانات الأستاذ');
+    if (ok) dlg.close();
+  };
+  dlg.showModal();
+}
+
+// ======================= العرض والتوجيه =======================
+const route = () => (location.hash.replace('#', '') || 'schedule');
+
+function render(){
+  const r = route();
+  document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-current', t.dataset.tab === r ? 'page' : 'false'));
+  $('#refresh').textContent = S.loading ? '…' : '⟳';
+  const app = $('#app');
+  const focusId = document.activeElement?.id; const caret = document.activeElement?.selectionStart;
+  if (!S.data){
+    app.innerHTML = S.loading ? '<div class="empty"><div class="big">⏳</div>جارٍ تحميل الجدول…</div>'
+      : `<div class="empty"><div class="big">📡</div>تعذّر تحميل الجدول<br><span class="small">${esc(S.error ?? '')}</span><br><br><button class="btn navy" id="retry">إعادة المحاولة</button></div>`;
+    $('#fab').hidden = true; return;
+  }
+  let banner = S.stale && S.error ? `<div class="banner">⚠️ تعرض آخر نسخة محفوظة. ${esc(S.error)}</div>` : '';
+  const views = { schedule: viewSchedule, online: viewOnline, contact: viewContact, admin: viewAdmin };
+  app.innerHTML = banner + (views[r] ?? viewSchedule)();
+  $('#fab').hidden = r !== 'schedule';
+  if (focusId){ const el = document.getElementById(focusId); if (el){ el.focus(); try{ el.setSelectionRange(caret, caret); }catch{} } }
+}
+
+// ======================= الأحداث =======================
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('button, [data-close]'); if (!b) return;
+  const ds = b.dataset;
+  if ('close' in ds){ b.closest('dialog')?.close(); return; }
+  if (b.id === 'retry' || b.id === 'refresh') return load();
+  if (b.id === 'logout'){ store.del(TOKEN_KEY); toast('تم تسجيل الخروج'); return render(); }
+  if ('sYear' in ds){ setYear(S.q, ds.sYear ? Number(ds.sYear) : null); return render(); }
+  if ('sGroup' in ds){ S.q.groupId = ds.sGroup || null; return render(); }
+  if ('sDept' in ds){ S.q.departmentId = ds.sDept || null; return render(); }
+  if ('sDay' in ds){ S.q.day = ds.sDay || null; return render(); }
+  if ('oYear' in ds){ setYear(S.o, ds.oYear ? Number(ds.oYear) : null); return render(); }
+  if ('oGroup' in ds){ S.o.groupId = ds.oGroup || null; return render(); }
+  if ('oDept' in ds){ S.o.departmentId = ds.oDept || null; return render(); }
+  if ('wa' in ds) return openWhatsAppDraft(ds.wa, ds.teacher);
+  if ('atab' in ds){ S.adminTab = ds.atab; return render(); }
+  if ('aday' in ds){ S.adminDay = ds.aday || null; return render(); }
+  if ('ayear' in ds){ S.adminYear = ds.ayear ? Number(ds.ayear) : null; return render(); }
+  if ('editLecture' in ds) return editLecture(ds.editLecture);
+  if ('editSubject' in ds) return editSubject(ds.editSubject);
+  if ('editTeacher' in ds) return editTeacher(ds.editTeacher);
+  const confirmDel = (what) => confirm(`حذف ${what}؟ سيختفي من عند الطلاب فورًا.`);
+  if ('delLecture' in ds){ const l = S.data.lectures.find((x) => x.id === ds.delLecture); if (confirmDel(`موعد «${l?.subjectName}» يوم ${L.DAY_NAME[l?.day]}`)) await adminDo({ action: 'deleteLecture', id: ds.delLecture }, 'تم حذف الموعد'); return; }
+  if ('delSubject' in ds){ if (confirmDel('المادة')) await adminDo({ action: 'deleteSubject', id: ds.delSubject }, 'تم حذف المادة'); return; }
+  if ('delTeacher' in ds){ if (confirmDel('الأستاذ')) await adminDo({ action: 'deleteTeacher', id: ds.delTeacher }, 'تم حذف الأستاذ'); return; }
+  if ('addLookup' in ds){ const n = prompt(ds.addLookup === 'group' ? 'اسم الفئة الجديدة:' : 'اسم القسم الجديد:'); if (n && n.trim()) await adminDo({ action: 'addLookup', kind: ds.addLookup, name: n }, 'تمت الإضافة'); return; }
+  if ('renLookup' in ds){ const [kind, id] = ds.renLookup.split('|'); const cur = nameOf(kind === 'group' ? S.data.groups : S.data.departments, id); const n = prompt('الاسم الجديد:', cur ?? ''); if (n && n.trim() && n !== cur) await adminDo({ action: 'renameLookup', kind, id, name: n }, 'تم تعديل الاسم'); return; }
+  if ('delLookup' in ds){ const [kind, id] = ds.delLookup.split('|'); if (confirmDel(kind === 'group' ? 'الفئة' : 'القسم')) await adminDo({ action: 'deleteLookup', kind, id }, 'تم الحذف'); return; }
+});
+
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'q'){ S.q.text = e.target.value; render(); }
+  if (e.target.id === 'oq'){ S.o.text = e.target.value; render(); }
+});
+
+document.addEventListener('submit', async (e) => {
+  if (e.target.id !== 'loginForm') return;
+  e.preventDefault();
+  try{
+    const r = await api('/api/admin', { action: 'login', password: $('#pw').value });
+    store.set(TOKEN_KEY, r.token); toast('أهلًا بك في لوحة الإدارة'); render();
+  }catch(err){ toast(err.message, true); }
+});
+
+$('#shareBtn').onclick = openShare;
+$('#pdfBtn').onclick = exportPdf;
+window.addEventListener('hashchange', render);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.data && Date.now() - new Date(S.data.fetchedAt).getTime() > 120000) load(); });
+
+const cached = store.get(CACHE_KEY);
+if (cached){ try{ S.data = JSON.parse(cached); S.stale = true; }catch{} }
+render();
+load();
+</script>
+</body>
+</html>

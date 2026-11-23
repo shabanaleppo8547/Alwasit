@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app_scope.dart';
+import '../../core/arabic_text.dart';
 import '../../logic/schedule_filter.dart';
 import '../../models/academic_year.dart';
 import '../../models/subject.dart';
@@ -172,7 +173,7 @@ class _SubjectCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(s.name,
+          Text(bidiSafe(s.name),
               style: text.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800, color: AppColors.ink)),
           const SizedBox(height: 4),

@@ -23,3 +23,10 @@ String lectureCountLabel(int n) {
   if (n >= 3 && n <= 10) return '$n محاضرات';
   return '$n محاضرة';
 }
+
+final RegExp _latinEndingWithSymbol = RegExp(r'([A-Za-z][A-Za-z0-9]*[+#]+)(?!‎)');
+
+/// يمنع ظهور «C++» بالشكل «++C» داخل نص عربي، بإضافة علامة اتجاه
+/// غير مرئية (U+200E) بعد الكلمة اللاتينية المنتهية برمز.
+String bidiSafe(String s) =>
+    s.replaceAllMapped(_latinEndingWithSymbol, (m) => '${m[1]}‎');
