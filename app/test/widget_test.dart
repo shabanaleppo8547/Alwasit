@@ -17,7 +17,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('برمجة C++'), findsOneWidget);
+    expect(find.text('برمجة C++\u200E'), findsOneWidget);
     expect(find.text('شعبان'), findsOneWidget);
     expect(find.text('4:30 م'), findsOneWidget);
     expect(find.text('7:00 م'), findsOneWidget);
