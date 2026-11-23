@@ -51,13 +51,17 @@ jobs:
         run: |
           API_URL="$(tr -d '[:space:]' < ../api_url.txt)"
           echo "API_BASE_URL=$API_URL"
-          flutter build apk --release --dart-define=API_BASE_URL="$API_URL"
-          cp build/app/outputs/flutter-apk/app-release.apk ../alwasit.apk
+          flutter build apk --release --split-per-abi --dart-define=API_BASE_URL="$API_URL"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ../alwasit.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ../alwasit-old-phones.apk
+          ls -la ../*.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: alwasit-apk
-          path: alwasit.apk
+          path: |
+            alwasit.apk
+            alwasit-old-phones.apk
           retention-days: 30
 
       - name: Publish release
@@ -65,6 +69,10 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: مركز الوسيط - نسخة ${{ github.run_number }}
-          body: ملف التطبيق للتثبيت على أندرويد. حمّل alwasit.apk من الأسفل.
-          files: alwasit.apk
+          body: |
+            حمّل alwasit.apk (لمعظم الهواتف).
+            إذا لم يُثبَّت على هاتف قديم، حمّل alwasit-old-phones.apk.
+          files: |
+            alwasit.apk
+            alwasit-old-phones.apk
           make_latest: true

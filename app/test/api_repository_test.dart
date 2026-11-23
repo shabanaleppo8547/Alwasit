@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:alwasit_center/core/app_exception.dart';
 import 'package:alwasit_center/data/api_schedule_repository.dart';
 import 'package:alwasit_center/models/lookup.dart';
+import 'package:alwasit_center/models/teacher.dart';
 import 'package:alwasit_center/models/week_day.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,35 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _serverSnapshot = {
   'fetchedAt': '2026-11-24T00:00:00.000Z',
   'updatedAt': null,
+  'groups': [
+    {'id': 'g1', 'name': 'A'},
+    {'id': 'g2', 'name': 'B'},
+  ],
+  'departments': [
+    {'id': 'd1', 'name': 'الجبر'},
+  ],
+  'teachers': [
+    {
+      'id': 't1',
+      'name': 'شعبان شحود',
+      'contacts': [
+        {'id': 'c1', 'type': 'whatsapp', 'value': '963935350049', 'label': null},
+        {'id': 'c2', 'type': 'telegram', 'value': 'https://t.me/shabanshahoud2', 'label': null},
+      ],
+    }
+  ],
+  'subjects': [
+    {
+      'id': 's1',
+      'name': 'البرمجة بلغة C++',
+      'year': 3,
+      'departmentId': null,
+      'departmentName': null,
+      'teacherId': 't1',
+      'teacherName': 'شعبان شحود',
+      'channels': [],
+    }
+  ],
   'lectures': [
     {
       'id': 'l1',
@@ -21,9 +51,9 @@ const _serverSnapshot = {
       'end': 1140,
       'year': 3,
       'subjectId': 's1',
-      'subjectName': 'برمجة C++',
+      'subjectName': 'البرمجة بلغة C++',
       'teacherId': 't1',
-      'teacherName': 'شعبان',
+      'teacherName': 'شعبان شحود',
       'groupId': null,
       'groupName': null,
       'departmentId': null,
@@ -31,18 +61,6 @@ const _serverSnapshot = {
       'notes': null,
     }
   ],
-  'lookups': {
-    'subject': [
-      {'id': 's1', 'name': 'برمجة C++'}
-    ],
-    'teacher': [
-      {'id': 't1', 'name': 'شعبان'}
-    ],
-    'group': [
-      {'id': 'g1', 'name': 'A'}
-    ],
-    'department': [],
-  },
 };
 
 http.Response _json(Object body, [int status = 200]) => http.Response.bytes(
@@ -70,8 +88,10 @@ void main() {
     );
     final snap = await repo.fetchAll();
     expect(snap.lectures.single.day, WeekDay.tuesday);
-    expect(snap.lectures.single.teacherName, 'شعبان');
-    expect(snap.of(LookupKind.group).single.name, 'A');
+    expect(snap.lectures.single.teacherName, 'شعبان شحود');
+    expect(snap.groups.map((g) => g.name), ['A', 'B']);
+    expect(snap.subjects.single.channels, isEmpty);
+    expect(snap.teachers.single.contacts.first.type, ContactType.whatsapp);
   });
 
   test('رسالة الخطأ العربية من الخادم تصل كما هي', () async {
@@ -107,9 +127,9 @@ void main() {
     );
     await repo.signIn(password: 'secret');
     expect(await repo.restoreAdminSession(), isTrue);
-    final item = await repo.addLookup(LookupKind.teacher, '  سامر ');
-    expect(item.name, 'سامر');
-    expect(seen.last['kind'], 'teacher');
+    final item = await repo.addLookup(LookupKind.group, '  C ');
+    expect(item.name, 'C');
+    expect(seen.last['kind'], 'group');
     expect(seen.last['auth'], 'Bearer T1');
     await repo.signOut();
     expect(await repo.restoreAdminSession(), isFalse);

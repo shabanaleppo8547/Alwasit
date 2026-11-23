@@ -44,3 +44,6 @@ String toDbTime(int minutes) {
   final m = (minutes % 60).toString().padLeft(2, '0');
   return '$h:$m';
 }
+
+/// بدون ص/م، كما في رسالة واتساب المعتمدة: «2:30 - 4:00»
+String formatRangeBare(int start, int end) => '${_clock(start)} - ${_clock(end)}';

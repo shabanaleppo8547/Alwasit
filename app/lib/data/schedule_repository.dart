@@ -1,6 +1,8 @@
 import '../models/lecture.dart';
 import '../models/lookup.dart';
 import '../models/schedule_snapshot.dart';
+import '../models/subject.dart';
+import '../models/teacher.dart';
 
 /// مصدر البيانات الوحيد الذي يقرأ منه الطلاب ويكتب فيه المسؤول.
 ///
@@ -30,7 +32,20 @@ abstract class ScheduleRepository {
 
   Future<void> deleteLecture(String id);
 
-  // ---------- القوائم ----------
+  // ---------- المواد وقنواتها ----------
+
+  /// إضافة (id فارغ) أو تعديل مادة مع روابط قنوات تيليغرام.
+  Future<void> saveSubject(Subject subject);
+
+  Future<void> deleteSubject(String id);
+
+  // ---------- الأساتذة ووسائل التواصل ----------
+
+  Future<void> saveTeacher(Teacher teacher);
+
+  Future<void> deleteTeacher(String id);
+
+  // ---------- الفئات والأقسام ----------
 
   Future<LookupItem> addLookup(LookupKind kind, String name);
 

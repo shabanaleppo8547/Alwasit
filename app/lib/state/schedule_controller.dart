@@ -9,12 +9,12 @@ import '../models/academic_year.dart';
 import '../models/lecture.dart';
 import '../models/lookup.dart';
 import '../models/schedule_snapshot.dart';
+import '../models/subject.dart';
+import '../models/teacher.dart';
 import '../models/week_day.dart';
 
-/// حالة الجدول المشتركة بين شاشة الطلاب ولوحة الإدارة.
-///
-/// الطرفان يقرآن من نفس المستودع، وأي تعديل من الإدارة يتبعه
-/// إعادة تحميل فورية فيظهر للطلاب مباشرة.
+/// حالة البيانات المشتركة بين كل أقسام التطبيق ولوحة الإدارة.
+/// أي تعديل من الإدارة يتبعه تحميل فوري فيظهر في كل مكان.
 class ScheduleController extends ChangeNotifier {
   ScheduleController({
     required this.repository,
@@ -25,7 +25,7 @@ class ScheduleController extends ChangeNotifier {
     final cached = cache.read();
     if (cached != null) {
       _snapshot = cached;
-      _isStale = true; // ستُستبدل بعد أول تحميل ناجح.
+      _isStale = true;
     }
   }
 
@@ -40,45 +40,68 @@ class ScheduleController extends ChangeNotifier {
 
   WeekDay? _day;
   int? _year;
+  String? _groupId;
   String? _departmentId;
   String _text = '';
 
-  // ---------- القراءة ----------
+  // ---------- البيانات ----------
 
   ScheduleSnapshot? get snapshot => _snapshot;
   bool get isLoading => _loading;
-
-  /// true إذا كانت البيانات المعروضة نسخة محفوظة قديمة (فشل التحديث).
   bool get isStale => _isStale;
   String? get error => _error;
 
-  WeekDay? get day => _day;
-  int? get year => _year;
-  String? get departmentId => _departmentId;
-  String get searchText => _text;
+  List<Lecture> get allLectures => _snapshot?.lectures ?? const [];
+  List<Subject> get subjects => _snapshot?.subjects ?? const [];
+  List<Teacher> get teachers => _snapshot?.teachers ?? const [];
+  List<LookupItem> get groups => _snapshot?.groups ?? const [];
+  List<LookupItem> get departments => _snapshot?.departments ?? const [];
+  List<LookupItem> lookups(LookupKind kind) =>
+      kind == LookupKind.group ? groups : departments;
 
   WeekDay get today => WeekDay.fromDate(_clock());
 
-  List<LookupItem> lookups(LookupKind kind) =>
-      _snapshot?.of(kind) ?? const [];
+  String? nameOf(List<LookupItem> list, String? id) {
+    if (id == null) return null;
+    for (final x in list) {
+      if (x.id == id) return x.name;
+    }
+    return null;
+  }
+
+  /// تظهر اختيارات الفئات لهذه السنة؟ (الثانية دائمًا، وغيرها إن استُخدمت)
+  bool yearHasGroups(int? year) {
+    if (year == null || !AcademicYears.allowsGroups(year)) return false;
+    if (year == AcademicYears.yearWithGroups) return groups.isNotEmpty;
+    return allLectures.any((l) => l.year == year && l.groupId != null) ||
+        subjects.any(
+            (s) => s.year == year && s.channels.any((c) => c.groupId != null));
+  }
+
+  bool yearHasDepartments(int? year) =>
+      year == AcademicYears.yearWithDepartments;
+
+  // ---------- فلاتر المواعيد ----------
+
+  WeekDay? get day => _day;
+  int? get year => _year;
+  String? get groupId => _groupId;
+  String? get departmentId => _departmentId;
+  String get searchText => _text;
 
   ScheduleQuery get query => ScheduleQuery(
         day: _day,
         year: _year,
+        groupId: _groupId,
         departmentId: _departmentId,
         text: _text,
       );
 
-  List<Lecture> get allLectures => _snapshot?.lectures ?? const [];
-
-  /// المحاضرات الظاهرة حسب كل الفلاتر.
   List<Lecture> get visibleLectures => ScheduleFilter.apply(allLectures, query);
 
-  /// عدد المحاضرات في كل يوم حسب الفلاتر الحالية (بغض النظر عن اليوم المختار).
   Map<WeekDay, int> get countsPerDay {
-    final all = ScheduleFilter.apply(allLectures, query.withDay(null));
     final counts = <WeekDay, int>{};
-    for (final l in all) {
+    for (final l in ScheduleFilter.apply(allLectures, query.withDay(null))) {
       counts[l.day] = (counts[l.day] ?? 0) + 1;
     }
     return counts;
@@ -87,13 +110,31 @@ class ScheduleController extends ChangeNotifier {
   List<Lecture> lecturesForDay(WeekDay day) =>
       ScheduleFilter.apply(allLectures, query.withDay(day));
 
-  String shareMessageFor(WeekDay day) => ShareMessageBuilder.buildDay(
-        day: day,
-        lectures: lecturesForDay(day),
-        includeYear: _year == null,
+  /// «للسنة الثانية، الفئة A»
+  String get audienceText => ScopeText.audience(
+        year: _year,
+        groupName: nameOf(groups, _groupId),
+        departmentName: nameOf(departments, _departmentId),
+        yearHasGroups: yearHasGroups(_year),
+        search: _text,
       );
 
-  // ---------- الفلاتر ----------
+  /// عنوان الجدول المعروض: «مواعيد يوم الأربعاء – لجميع السنوات»
+  String titleFor(WeekDay? day) => 'مواعيد ${ScopeText.days(day)} – $audienceText';
+
+  /// رسالة واتساب للجدول المعروض (يوم محدد أو كل الأيام).
+  String shareMessage({WeekDay? day, bool useSelectedDay = true}) {
+    final d = useSelectedDay ? _day : day;
+    return ShareMessageBuilder.build(
+      lectures: ScheduleFilter.apply(allLectures, query.withDay(d)),
+      day: d,
+      audience: audienceText,
+      showYear: _year == null,
+      showDepartment: _departmentId == null,
+      allGroupsLabel: ScopeText.groupsJoined(groups),
+      now: _clock(),
+    );
+  }
 
   void selectDay(WeekDay? day) {
     if (_day == day) return;
@@ -104,7 +145,14 @@ class ScheduleController extends ChangeNotifier {
   void selectYear(int? year) {
     if (_year == year) return;
     _year = year;
-    if (year != AcademicYears.yearWithDepartments) _departmentId = null;
+    if (!yearHasGroups(year)) _groupId = null;
+    if (!yearHasDepartments(year)) _departmentId = null;
+    notifyListeners();
+  }
+
+  void selectGroup(String? id) {
+    if (_groupId == id) return;
+    _groupId = id;
     notifyListeners();
   }
 
@@ -122,7 +170,6 @@ class ScheduleController extends ChangeNotifier {
 
   // ---------- التحميل ----------
 
-  /// يجلب أحدث بيانات. عند الفشل يُبقي آخر نسخة ويعرض سبب الخطأ.
   Future<void> load() async {
     if (_loading) return;
     _loading = true;
@@ -133,7 +180,8 @@ class ScheduleController extends ChangeNotifier {
       _snapshot = fresh;
       _isStale = false;
       await cache.save(fresh);
-      _dropMissingDepartment();
+      if (nameOf(groups, _groupId) == null) _groupId = null;
+      if (nameOf(departments, _departmentId) == null) _departmentId = null;
     } catch (e) {
       _error = AppException.from(e).message;
       if (_snapshot != null) _isStale = true;
@@ -143,19 +191,11 @@ class ScheduleController extends ChangeNotifier {
     }
   }
 
-  /// تحديث تلقائي عند العودة للتطبيق إذا مضت مدة على آخر تحديث.
   Future<void> refreshIfOld({Duration maxAge = const Duration(minutes: 2)}) {
     final last = _snapshot?.fetchedAt;
     if (last == null || _isStale || _clock().difference(last) > maxAge) {
       return load();
     }
     return Future.value();
-  }
-
-  void _dropMissingDepartment() {
-    final id = _departmentId;
-    if (id == null) return;
-    final exists = lookups(LookupKind.department).any((d) => d.id == id);
-    if (!exists) _departmentId = null;
   }
 }

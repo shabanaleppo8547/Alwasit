@@ -4,10 +4,13 @@
 // { "action": "check" }                               → { ok }
 // { "action": "saveLecture", "lecture": {...} }       → { id }
 // { "action": "deleteLecture", "id": "..." }
-// { "action": "addLookup", "kind": "subject", "name": "..." } → { item }
+// { "action": "saveSubject", "subject": {...} }       → { id }   (مع روابط قنوات تيليغرام)
+// { "action": "deleteSubject", "id": "..." }
+// { "action": "saveTeacher", "teacher": {...} }       → { id }   (مع وسائل التواصل)
+// { "action": "deleteTeacher", "id": "..." }
+// { "action": "addLookup", "kind": "group|department", "name": "..." } → { item }
 // { "action": "renameLookup", "kind", "id", "name" }
 // { "action": "deleteLookup", "kind", "id" }
-// kind: subject | teacher | group | department
 
 import { login, requireAdmin } from '../lib/auth.js';
 import { mutate, ops } from '../lib/db.js';
@@ -37,6 +40,18 @@ export default async function handler(req, res) {
         break;
       case 'deleteLecture':
         result = await mutate((db) => ops.deleteLecture(db, body));
+        break;
+      case 'saveSubject':
+        result = await mutate((db) => ops.saveSubject(db, body.subject ?? {}));
+        break;
+      case 'deleteSubject':
+        result = await mutate((db) => ops.deleteSubject(db, body));
+        break;
+      case 'saveTeacher':
+        result = await mutate((db) => ops.saveTeacher(db, body.teacher ?? {}));
+        break;
+      case 'deleteTeacher':
+        result = await mutate((db) => ops.deleteTeacher(db, body));
         break;
       case 'addLookup':
         result = await mutate((db) => ops.addLookup(db, body));

@@ -8,6 +8,8 @@ import '../core/app_exception.dart';
 import '../models/lecture.dart';
 import '../models/lookup.dart';
 import '../models/schedule_snapshot.dart';
+import '../models/subject.dart';
+import '../models/teacher.dart';
 import 'schedule_repository.dart';
 
 /// يتصل بخادم المركز على Vercel.
@@ -92,6 +94,26 @@ class ApiScheduleRepository implements ScheduleRepository {
   @override
   Future<void> deleteLecture(String id) =>
       _admin({'action': 'deleteLecture', 'id': id});
+
+  @override
+  Future<void> saveSubject(Subject subject) => _admin({
+        'action': 'saveSubject',
+        'subject': {...subject.toJson(), 'id': subject.id.isEmpty ? null : subject.id},
+      });
+
+  @override
+  Future<void> deleteSubject(String id) =>
+      _admin({'action': 'deleteSubject', 'id': id});
+
+  @override
+  Future<void> saveTeacher(Teacher teacher) => _admin({
+        'action': 'saveTeacher',
+        'teacher': {...teacher.toJson(), 'id': teacher.id.isEmpty ? null : teacher.id},
+      });
+
+  @override
+  Future<void> deleteTeacher(String id) =>
+      _admin({'action': 'deleteTeacher', 'id': id});
 
   @override
   Future<LookupItem> addLookup(LookupKind kind, String name) async {

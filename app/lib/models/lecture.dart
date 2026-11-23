@@ -54,11 +54,8 @@ class Lecture {
         day: day,
         startMinutes: startMinutes,
         endMinutes: endMinutes,
-        year: year,
         subjectId: subjectId,
-        teacherId: teacherId,
         groupId: groupId,
-        departmentId: departmentId,
         notes: notes,
       );
 
@@ -67,7 +64,7 @@ class Lecture {
         day: WeekDay.fromKey(j['day'] as String),
         startMinutes: j['start'] as int,
         endMinutes: j['end'] as int,
-        year: j['year'] as int,
+        year: (j['year'] as num).toInt(),
         subjectId: j['subjectId'] as String,
         subjectName: j['subjectName'] as String,
         teacherId: j['teacherId'] as String,
@@ -97,18 +94,16 @@ class Lecture {
       };
 }
 
-/// بيانات محاضرة عند الإضافة أو التعديل (بالمعرّفات فقط).
+/// بيانات موعد عند الإضافة أو التعديل.
+/// السنة والأستاذ والقسم تُستمد من المادة على الخادم.
 class LectureDraft {
   const LectureDraft({
     this.id,
     required this.day,
     required this.startMinutes,
     required this.endMinutes,
-    required this.year,
     required this.subjectId,
-    required this.teacherId,
     this.groupId,
-    this.departmentId,
     this.notes,
   });
 
@@ -117,49 +112,19 @@ class LectureDraft {
   final WeekDay day;
   final int startMinutes;
   final int endMinutes;
-  final int year;
   final String subjectId;
-  final String teacherId;
+
+  /// null = مشتركة بين كل الفئات.
   final String? groupId;
-  final String? departmentId;
   final String? notes;
-
-  LectureDraft withId(String newId) => LectureDraft(
-        id: newId,
-        day: day,
-        startMinutes: startMinutes,
-        endMinutes: endMinutes,
-        year: year,
-        subjectId: subjectId,
-        teacherId: teacherId,
-        groupId: groupId,
-        departmentId: departmentId,
-        notes: notes,
-      );
-
-  factory LectureDraft.fromJson(Map<String, dynamic> j) => LectureDraft(
-        id: j['id'] as String?,
-        day: WeekDay.fromKey(j['day'] as String),
-        startMinutes: j['start'] as int,
-        endMinutes: j['end'] as int,
-        year: j['year'] as int,
-        subjectId: j['subjectId'] as String,
-        teacherId: j['teacherId'] as String,
-        groupId: j['groupId'] as String?,
-        departmentId: j['departmentId'] as String?,
-        notes: j['notes'] as String?,
-      );
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'day': day.key,
         'start': startMinutes,
         'end': endMinutes,
-        'year': year,
         'subjectId': subjectId,
-        'teacherId': teacherId,
         'groupId': groupId,
-        'departmentId': departmentId,
         'notes': notes,
       };
 }

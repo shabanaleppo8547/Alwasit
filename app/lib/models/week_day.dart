@@ -2,7 +2,7 @@
 enum WeekDay {
   saturday('السبت'),
   sunday('الأحد'),
-  monday('الاثنين'),
+  monday('الإثنين'),
   tuesday('الثلاثاء'),
   wednesday('الأربعاء'),
   thursday('الخميس'),

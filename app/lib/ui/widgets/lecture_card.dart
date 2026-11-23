@@ -72,7 +72,9 @@ class LectureCard extends StatelessWidget {
                         if (showYear)
                           _Tag(label: AcademicYears.name(l.year)),
                         if (l.groupName != null)
-                          _Tag(label: 'فئة ${l.groupName}', strong: true),
+                          _Tag(label: 'الفئة ${l.groupName}', strong: true)
+                        else if (l.year == AcademicYears.yearWithGroups)
+                          const _Tag(label: 'مشتركة بين الفئات'),
                         if (l.departmentName != null)
                           _Tag(label: 'قسم ${l.departmentName}'),
                         if (l.year == AcademicYears.yearWithDepartments &&

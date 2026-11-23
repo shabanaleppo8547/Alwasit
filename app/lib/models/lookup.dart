@@ -1,19 +1,15 @@
-/// القوائم التي يديرها المسؤول.
+/// القوائم البسيطة التي يديرها المسؤول (بالاسم فقط).
 enum LookupKind {
-  subject('subjects', 'المواد', 'مادة'),
-  teacher('teachers', 'المدرسون', 'مدرس'),
-  group('class_groups', 'الفئات', 'فئة'),
-  department('departments', 'أقسام السنة الرابعة', 'قسم');
+  group('الفئات', 'فئة'),
+  department('أقسام السنة الرابعة', 'قسم');
 
-  const LookupKind(this.table, this.pluralLabel, this.singularLabel);
+  const LookupKind(this.pluralLabel, this.singularLabel);
 
-  /// اسم الجدول في قاعدة البيانات.
-  final String table;
   final String pluralLabel;
   final String singularLabel;
 }
 
-/// عنصر في قائمة (مادة، مدرس، فئة، قسم).
+/// عنصر بسيط: فئة أو قسم.
 class LookupItem {
   const LookupItem({required this.id, required this.name});
 

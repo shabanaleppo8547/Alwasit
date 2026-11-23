@@ -23,8 +23,8 @@ class LookupsTab extends StatelessWidget {
           children: [
             const InfoBanner(
               icon: Icons.info_outline,
-              message: 'تعديل اسم هنا يغيّره في كل المحاضرات المرتبطة به. '
-                  'لا يمكن حذف عنصر مستخدم في محاضرات.',
+              message: 'تعديل الاسم هنا يغيّره في كل المواعيد والمواد والرسائل. '
+                  'لا يمكن حذف عنصر مستخدم. لا توجد فئات في السنتين الثالثة والرابعة.',
             ),
             const SizedBox(height: 12),
             for (final kind in LookupKind.values)
@@ -42,14 +42,16 @@ class _LookupSection extends StatelessWidget {
   final ScheduleController controller;
   final LookupKind kind;
 
-  int _usage(String id) => controller.allLectures.where((l) {
-        return switch (kind) {
-          LookupKind.subject => l.subjectId == id,
-          LookupKind.teacher => l.teacherId == id,
-          LookupKind.group => l.groupId == id,
-          LookupKind.department => l.departmentId == id,
-        };
-      }).length;
+  int _usage(String id) => switch (kind) {
+        LookupKind.group => controller.allLectures
+                .where((l) => l.groupId == id)
+                .length +
+            controller.subjects
+                .where((s) => s.channels.any((c) => c.groupId == id))
+                .length,
+        LookupKind.department =>
+          controller.subjects.where((s) => s.departmentId == id).length,
+      };
 
   Future<void> _add(BuildContext context) async {
     final name = await askForText(context,
@@ -81,8 +83,8 @@ class _LookupSection extends StatelessWidget {
     if (used > 0) {
       showMessage(
         context,
-        '«${item.name}» مستخدم في $used من المحاضرات. '
-        'عدّلها أو احذفها أولًا.',
+        '«${item.name}» مستخدم في $used من المواعيد أو المواد. '
+        'عدّلها أولًا.',
         error: true,
       );
       return;
@@ -142,7 +144,7 @@ class _LookupSection extends StatelessWidget {
           for (final item in items)
             ListTile(
               title: Text(item.name),
-              subtitle: Text('مستخدم في ${_usage(item.id)} محاضرة'),
+              subtitle: Text('مستخدم في ${_usage(item.id)} من المواعيد والمواد'),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

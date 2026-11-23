@@ -8,7 +8,7 @@ import 'data/api_schedule_repository.dart';
 import 'data/schedule_cache.dart';
 import 'data/schedule_repository.dart';
 import 'state/schedule_controller.dart';
-import 'ui/student/home_screen.dart';
+import 'ui/student/root_shell.dart';
 import 'ui/theme.dart';
 import 'ui/widgets/common.dart';
 
@@ -61,7 +61,7 @@ class AlwasitApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        home: const HomeScreen(),
+        home: const RootShell(),
       ),
     );
   }

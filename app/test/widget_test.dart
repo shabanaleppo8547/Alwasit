@@ -21,7 +21,7 @@ void main() {
     expect(find.text('شعبان'), findsOneWidget);
     expect(find.text('4:30 م'), findsOneWidget);
     expect(find.text('7:00 م'), findsOneWidget);
-    expect(find.text('فئة A'), findsOneWidget);
+    expect(find.text('الفئة A'), findsOneWidget);
     expect(find.text('السنة الثالثة'), findsOneWidget);
   });
 }
