@@ -1,0 +1,12 @@
+{
+  "name": "alwasit",
+  "private": true,
+  "type": "module",
+  "description": "خادم مركز الوسيط: مصدر بيانات واحد للتطبيق ولوحة الإدارة",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

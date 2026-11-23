@@ -1,0 +1,27 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# مفاتيح الاتصال المحلية (لا ترفعها إلى GitHub)
+config/supabase.json
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/release/
+*.keystore
+*.jks
+android/key.properties
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
