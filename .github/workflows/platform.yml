@@ -1,0 +1,113 @@
+name: Platform (tests + Android APK)
+
+# المنصة التعليمية الجديدة في مجلد platform/.
+# - اختبارات: فحص الأنواع، اختبارات الوحدة، البناء، ثم اختبار شامل في متصفح حقيقي على قاعدة Postgres.
+# - Android: يبني APK يفتح المنصة المنشورة. ضع رابط المنصة في
+#   Settings → Secrets and variables → Actions → Variables باسم PLATFORM_URL.
+
+on:
+  push:
+    paths: ['platform/**', '.github/workflows/platform.yml']
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: 'رابط المنصة المنشورة (مثال: https://alwasit-platform.vercel.app)'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: platform-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: platform
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: alwasit
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: alwasit
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://alwasit:ci-only-password@localhost:5432/alwasit
+      ADMIN_EMAILS: admin@example.test
+      APP_URL: http://localhost:3100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Install browser
+        run: npx -y playwright@1 install --with-deps chromium && npm i --no-save playwright@1
+      - name: End-to-end tests
+        run: |
+          PORT=3100 npx next start > server.log 2>&1 &
+          npx -y wait-on@8 -t 60000 http://localhost:3100/api/health
+          BASE_URL=http://localhost:3100 node tests/e2e/run.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: |
+            platform/test-results/screens
+            platform/server.log
+          retention-days: 14
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Sync Capacitor
+        env:
+          APP_URL: ${{ github.event.inputs.app_url || vars.PLATFORM_URL || 'https://example.invalid' }}
+        run: |
+          echo "يفتح التطبيق: $APP_URL"
+          npx cap sync android
+      - name: Build APK
+        working-directory: platform/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../alwasit-platform.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alwasit-platform-apk
+          path: platform/alwasit-platform.apk
+          retention-days: 30
+      - name: Publish release
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: platform-build-${{ github.run_number }}
+          name: منصة مركز الوسيط – نسخة ${{ github.run_number }}
+          body: |
+            تطبيق Android للمنصة التعليمية (نسخة اختبار).
+            حمّل alwasit-platform.apk وثبّته (اسمح بالتثبيت من مصادر غير معروفة).
+          files: platform/alwasit-platform.apk
+          make_latest: false

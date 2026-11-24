@@ -1,4 +1,5 @@
-app
-.github
-tests
+/app
+/.github
+/tests
+/platform
 *.md
