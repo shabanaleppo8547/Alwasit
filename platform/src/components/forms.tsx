@@ -17,7 +17,10 @@ export function ActionForm({
   resetOnSuccess = false,
   confirm,
   hideMessage = false,
+  beforeSubmit,
 }: {
+  /** خطوة غير متزامنة قبل الإرسال (مثل توقيع تحدي الجهاز). تعيد رسالة خطأ لإيقاف الإرسال. */
+  beforeSubmit?: (fd: FormData) => Promise<string | void>;
   action: Action;
   children: ReactNode | ((state: ActionState) => ReactNode);
   className?: string;
@@ -26,6 +29,8 @@ export function ActionForm({
   hideMessage?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(action, {});
+  const [preparing, setPreparing] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.ok && resetOnSuccess) ref.current?.reset();
@@ -39,18 +44,30 @@ export function ActionForm({
       onSubmit={(e) => {
         // نرسل يدويًا حتى لا يمسح React الحقول عند ظهور خطأ تحقق؛ المسح يتم فقط بعد النجاح.
         e.preventDefault();
-        if (isPending) return;
+        if (isPending || preparing) return;
         if (confirm && !window.confirm(confirm)) return;
         const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
-        startTransition(() => formAction(fd));
+        setLocalError(null);
+        if (!beforeSubmit) {
+          startTransition(() => formAction(fd));
+          return;
+        }
+        setPreparing(true);
+        beforeSubmit(fd)
+          .then((err) => {
+            if (err) setLocalError(err);
+            else startTransition(() => formAction(fd));
+          })
+          .catch(() => setLocalError('حدث خطأ غير متوقع. حدّث الصفحة وحاول مجددًا.'))
+          .finally(() => setPreparing(false));
       }}
     >
-      <Pending value={isPending}>
+      <Pending value={isPending || preparing}>
         <FieldErrorsContext value={state.fieldErrors}>
           {typeof children === 'function' ? children(state) : children}
         </FieldErrorsContext>
       </Pending>
-      {!hideMessage && <FormMessage state={state} />}
+      {!hideMessage && <FormMessage state={localError ? { ok: false, message: localError } : state} />}
     </form>
   );
 }

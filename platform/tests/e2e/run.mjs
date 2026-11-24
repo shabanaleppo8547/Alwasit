@@ -14,6 +14,8 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@example.test';
 const SHOTS = process.env.SHOTS_DIR ?? 'test-results/screens';
 const run = Date.now().toString(36);
 const PASSWORD = 'Test-pass-123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'local-test-admin-pass';
+const DATABASE_URL = process.env.DATABASE_URL;
 mkdirSync(SHOTS, { recursive: true });
 
 let passed = 0;
@@ -121,25 +123,35 @@ try {
     // المحاضرة المدفوعة ليست رابطًا للطالب؛ نأخذ معرّفها من المدير لاحقًا.
   });
 
-  await step('المدير يدخل لوحة الإدارة', async () => {
-    const existing = await a.ctx.request.get(`${BASE}/login`);
-    assert.equal(existing.status(), 200);
+  await step('المدير: الدخول بحساب مدير ثم كلمة مرور الإدارة', async () => {
     await register(a.page, { name: 'مدير المركز', email: ADMIN_EMAIL, phone: '0990000000' });
     await Promise.race([
-      a.page.waitForURL(/\/dashboard/),
+      a.page.waitForURL(/\/admin-unlock/),
       a.page.getByText('هذا البريد مسجّل مسبقًا').first().waitFor(),
     ]);
     if (a.page.url().includes('/register')) {
-      // الحساب موجود من تشغيل سابق: نسجّل الدخول.
       await a.page.goto(`${BASE}/login`);
       await a.page.fill('input[name=email]', ADMIN_EMAIL);
       await a.page.fill('input[name=password]', PASSWORD);
       await a.page.click('main button[type=submit]');
-      await a.page.waitForURL(/\/admin/);
+      await a.page.waitForURL(/\/admin-unlock/);
     }
+    // بدون كلمة مرور الإدارة لا تُفتح اللوحة.
     await a.page.goto(`${BASE}/admin`);
+    await a.page.waitForURL(/\/admin-unlock/);
+    await a.page.fill('input[name=adminPassword]', 'wrong-admin-password');
+    await a.page.click('main button[type=submit]');
+    await a.page.getByText('كلمة مرور الإدارة غير صحيحة.').first().waitFor();
+    await a.page.fill('input[name=adminPassword]', ADMIN_PASSWORD);
+    await a.page.click('main button[type=submit]');
+    await a.page.waitForURL(/\/admin$/);
     await a.page.getByRole('heading', { name: 'نظرة عامة' }).waitFor();
     await a.page.screenshot({ path: `${SHOTS}/05-admin-home.png`, fullPage: true });
+  });
+
+  await step('بريد غير مدرج في قائمة المدراء لا يدخل الإدارة حتى لو عرف كلمة مرور الإدارة', async () => {
+    await s.page.goto(`${BASE}/admin-unlock`);
+    await s.page.waitForURL(/\/dashboard\?denied=1/);
   });
 
   await step('المدير يرى المحاضرات ويحدد محاضرة مدفوعة', async () => {
@@ -250,10 +262,12 @@ try {
     await fresh.page.waitForURL(/\/login\?reset=1/);
     // الجلسة القديمة للطالب أُلغيت بعد تغيير كلمة المرور.
     assert.equal(await streamStatus(s.page, paidLectureId), 401);
-    await fresh.page.fill('input[name=email]', studentEmail);
-    await fresh.page.fill('input[name=password]', 'New-pass-456');
-    await fresh.page.click('main button[type=submit]');
-    await fresh.page.waitForURL(/\/dashboard/);
+    // الدخول بكلمة المرور الجديدة من الجهاز المعتمد نفسه.
+    await s.page.goto(`${BASE}/login`);
+    await s.page.fill('input[name=email]', studentEmail);
+    await s.page.fill('input[name=password]', 'New-pass-456');
+    await s.page.click('main button[type=submit]');
+    await s.page.waitForURL(/\/dashboard/);
     // إعادة استخدام الرابط مرفوضة.
     await fresh.page.goto(link.replace(/^https?:\/\/[^/]+/, BASE));
     await fresh.page.fill('input[name=password]', 'Another-pass-789');
@@ -313,6 +327,114 @@ try {
     await x.page.click('main button[type=submit]');
     await x.page.getByText('هذا الحساب موقوف').first().waitFor();
     await x.ctx.close();
+  });
+
+  // ---------- جهاز واحد لكل حساب ----------
+  const deviceEmail = `device-${run}@example.test`;
+  const d1 = await newUser(); // الجهاز الأصلي
+  const d2 = await newUser(); // جهاز آخر (مفتاح مختلف)
+
+  await step('الحساب يُربط بأول جهاز عند التسجيل', async () => {
+    await register(d1.page, { name: 'طالب الجهاز', email: deviceEmail, phone: '0993334445' });
+    await d1.page.waitForURL(/\/dashboard/);
+    assert.equal(await streamStatus(d1.page, freeLectureId), 206);
+  });
+
+  await step('الدخول من جهاز آخر يُرفض رغم صحة كلمة المرور، ولا يفصل الجهاز الأصلي', async () => {
+    await d2.page.goto(`${BASE}/login`);
+    await d2.page.fill('input[name=email]', deviceEmail);
+    await d2.page.fill('input[name=password]', PASSWORD);
+    await d2.page.click('main button[type=submit]');
+    await d2.page.getByText('هذا الحساب مرتبط بجهاز آخر').first().waitFor();
+    assert.ok(d2.page.url().includes('/login'));
+    assert.equal(await streamStatus(d2.page, freeLectureId), 401);
+    await d2.page.screenshot({ path: `${SHOTS}/15-other-device-rejected.png`, fullPage: true });
+    // الجهاز الأصلي ما زال مسجّل الدخول ويشاهد.
+    assert.equal(await streamStatus(d1.page, freeLectureId), 206);
+    await d1.page.goto(`${BASE}/dashboard`);
+    await d1.page.getByText('طالب الجهاز').first().waitFor();
+  });
+
+  await step('تسجيل الخروج لا يلغي ربط الجهاز: الدخول مجددًا من الجهاز نفسه ينجح', async () => {
+    await d1.page.goto(`${BASE}/account`);
+    await d1.page.getByRole('button', { name: 'تسجيل الخروج من هذا الجهاز' }).click();
+    await d1.page.waitForURL(`${BASE}/`);
+    await d1.page.goto(`${BASE}/login`);
+    await d1.page.fill('input[name=email]', deviceEmail);
+    await d1.page.fill('input[name=password]', PASSWORD);
+    await d1.page.click('main button[type=submit]');
+    await d1.page.waitForURL(/\/dashboard/);
+    // وبعد خروج الجهاز الأصلي، الجهاز الآخر ما زال مرفوضًا.
+    await d2.page.goto(`${BASE}/login`);
+    await d2.page.fill('input[name=email]', deviceEmail);
+    await d2.page.fill('input[name=password]', PASSWORD);
+    await d2.page.click('main button[type=submit]');
+    await d2.page.getByText('هذا الحساب مرتبط بجهاز آخر').first().waitFor();
+  });
+
+  await step('نسخ كوكي الجلسة لا ينقل مفتاح الجهاز (لا يمكن تجديد الإثبات)', async () => {
+    const cookies = await d1.ctx.cookies();
+    const thief = await newUser();
+    await thief.ctx.addCookies(cookies);
+    await thief.page.goto(`${BASE}/dashboard`);
+    // الإثبات الحالي ما زال ساريًا لدقائق، لكن التجديد يحتاج المفتاح الخاص غير الموجود هنا.
+    const renewed = await thief.page.evaluate(async () => {
+      const db = await new Promise((r) => { const q = indexedDB.open('alwasit-device', 1); q.onupgradeneeded = () => q.result.createObjectStore('keys'); q.onsuccess = () => r(q.result); });
+      return new Promise((r) => { const q = db.transaction('keys').objectStore('keys').get('device-key-v1'); q.onsuccess = () => r(Boolean(q.result)); });
+    });
+    assert.equal(renewed, false, 'المفتاح الخاص لا يُنقل مع الكوكي');
+    await thief.ctx.close();
+  });
+
+  if (DATABASE_URL) {
+    await step('انتهاء الإثبات القصير: البث يُرفض، والجهاز المعتمد يجدده تلقائيًا', async () => {
+      const postgres = require('postgres');
+      const sql = postgres(DATABASE_URL, { max: 1 });
+      await sql`update sessions set proof_expires_at = now() - interval '1 minute' where user_id = (select id from users where email = ${deviceEmail})`;
+      await sql.end();
+      assert.equal(await streamStatus(d1.page, freeLectureId), 401);
+      await d1.page.goto(`${BASE}/dashboard`);
+      await d1.page.waitForURL(/\/dashboard$/); // مرّ عبر صفحة التحقق وعاد تلقائيًا
+      assert.equal(await streamStatus(d1.page, freeLectureId), 206);
+    });
+  }
+
+  await step('الإدارة ترى طلب النقل وتوافق عليه: يُلغى الجهاز القديم وجلساته ويُعتمد الجديد', async () => {
+    await a.page.goto(`${BASE}/admin/devices`);
+    await a.page.getByText('طالب الجهاز').first().waitFor();
+    await a.page.getByText('رفض دخول من جهاز غير معتمد').first().waitFor();
+    await a.page.screenshot({ path: `${SHOTS}/16-admin-devices.png`, fullPage: true });
+    const row = a.page.locator('li', { hasText: deviceEmail });
+    a.page.once('dialog', (d) => d.accept());
+    await row.getByRole('button', { name: 'موافقة واعتماد الجهاز الجديد' }).click();
+    await row.waitFor({ state: 'detached' });
+
+    // الجهاز القديم: الجلسة أُبطلت فورًا.
+    assert.equal(await streamStatus(d1.page, freeLectureId), 401);
+    // الجهاز الجديد: الدخول ينجح الآن.
+    await d2.page.goto(`${BASE}/login`);
+    await d2.page.fill('input[name=email]', deviceEmail);
+    await d2.page.fill('input[name=password]', PASSWORD);
+    await d2.page.click('main button[type=submit]');
+    await d2.page.waitForURL(/\/dashboard/);
+    assert.equal(await streamStatus(d2.page, freeLectureId), 206);
+    // والجهاز القديم أصبح هو المرفوض.
+    await d1.page.goto(`${BASE}/login`);
+    await d1.page.fill('input[name=email]', deviceEmail);
+    await d1.page.fill('input[name=password]', PASSWORD);
+    await d1.page.click('main button[type=submit]');
+    await d1.page.getByText('هذا الحساب مرتبط بجهاز آخر').first().waitFor();
+  });
+
+  await step('رفض طلب النقل يُبقي الجهاز الحالي معتمدًا', async () => {
+    await a.page.goto(`${BASE}/admin/devices`);
+    const row = a.page.locator('li', { hasText: deviceEmail });
+    await row.getByText('رفض', { exact: true }).click();
+    await row.getByRole('button', { name: 'تأكيد الرفض' }).click();
+    await row.waitFor({ state: 'detached' });
+    assert.equal(await streamStatus(d2.page, freeLectureId), 206);
+    await d1.ctx.close();
+    await d2.ctx.close();
   });
 
   await step('لقطة سطح المكتب للصفحة الرئيسية', async () => {

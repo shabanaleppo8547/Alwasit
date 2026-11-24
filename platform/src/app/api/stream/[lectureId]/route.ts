@@ -22,6 +22,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ lectureId: stri
   }
 
   const user = await getCurrentUser();
+  // الطالب: جلسة على جهازه المعتمد + إثبات حديث لامتلاك مفتاح الجهاز (عمره 15 دقيقة).
+  if (user && !user.proofFresh) {
+    return new Response('يلزم التحقق من الجهاز', { status: 401, headers: { 'Cache-Control': 'no-store' } });
+  }
   const result = await authorizeLecture(user, lectureId);
   if (!result.ok) {
     const status = result.reason === 'unauthenticated' ? 401 : result.reason === 'forbidden' ? 403 : 404;

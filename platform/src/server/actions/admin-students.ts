@@ -93,23 +93,6 @@ export async function setUserActiveAction(_p: ActionState, fd: FormData): Promis
   return done(active ? 'تم تفعيل الحساب.' : 'تم إيقاف الحساب وتسجيل خروجه من كل الأجهزة.');
 }
 
-export async function setUserRoleAction(_p: ActionState, fd: FormData): Promise<ActionState> {
-  const admin = await requireAdmin();
-  const parsed = parseForm(z.object({ id: uuid, role: z.enum(['student', 'admin']) }), fd);
-  if (!parsed.ok) return parsed.state;
-  const { id, role } = parsed.data;
-  if (id === admin.id) return fail('لا يمكنك تغيير دورك بنفسك.');
-  try {
-    await db.update(schema.users).set({ role }).where(eq(schema.users.id, id));
-    await destroyAllSessions(id);
-    await audit(admin.id, 'user.role', id, { role });
-  } catch (err) {
-    return handleError(err, 'تغيير الدور');
-  }
-  revalidatePath(`/admin/students/${id}`);
-  return done(role === 'admin' ? 'أصبح هذا الحساب مديرًا.' : 'أصبح هذا الحساب طالبًا.');
-}
-
 /** للمراكز التي لا تعتمد على البريد: المدير يولّد رابطًا ويرسله للطالب عبر واتساب. */
 export async function adminResetLinkAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const admin = await requireAdmin();

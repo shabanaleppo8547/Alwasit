@@ -6,6 +6,8 @@ export type ActionState = {
   nonce?: number;
   /** رابط اختياري يُعرض مع رسالة النجاح. */
   href?: string;
+  /** رُفض الدخول لأن الحساب مرتبط بجهاز آخر. */
+  deviceBlocked?: boolean;
 };
 
 export const initialState: ActionState = {};

@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/server/auth/session';
 import { logoutAction } from '@/server/actions/auth';
 import { Logo } from './logo';
+import { DeviceKeepAlive } from './device-keepalive';
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
   return (
     <header className="sticky top-0 z-30 border-b border-line/70 bg-paper/85 backdrop-blur-md">
+      {user && user.deviceId && <DeviceKeepAlive />}
       <div className="page flex h-16 items-center justify-between gap-3">
         <Link href="/" aria-label="الصفحة الرئيسية">
           <Logo />
@@ -14,7 +16,7 @@ export async function SiteHeader() {
         <nav className="flex items-center gap-2">
           {user ? (
             <>
-              {user.role === 'admin' && (
+              {user.adminAccount && (
                 <Link href="/admin" className="btn-ghost btn-sm hidden sm:inline-flex">
                   لوحة الإدارة
                 </Link>

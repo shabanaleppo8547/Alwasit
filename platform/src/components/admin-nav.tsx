@@ -9,10 +9,11 @@ const LINKS = [
   { href: '/admin/subjects', label: 'المواد والمحاضرات', icon: '▤' },
   { href: '/admin/structure', label: 'السنوات والأقسام', icon: '▦' },
   { href: '/admin/teachers', label: 'الأساتذة', icon: '✎' },
+  { href: '/admin/devices', label: 'الأجهزة', icon: '⎚' },
   { href: '/admin/codes', label: 'رموز التفعيل', icon: '⌗' },
 ];
 
-export function AdminNav() {
+export function AdminNav({ pendingDevices = 0 }: { pendingDevices?: number }) {
   const path = usePathname();
   return (
     <nav aria-label="أقسام الإدارة" className="-mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:px-0">
@@ -31,6 +32,9 @@ export function AdminNav() {
               {l.icon}
             </span>
             {l.label}
+            {l.href === '/admin/devices' && pendingDevices > 0 && (
+              <span className="rounded-full bg-amber px-1.5 text-xs font-bold text-ink">{pendingDevices}</span>
+            )}
           </Link>
         );
       })}

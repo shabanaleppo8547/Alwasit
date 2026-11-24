@@ -8,6 +8,7 @@
 
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -56,11 +57,112 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    /** الجهاز المعتمد الذي أُنشئت منه الجلسة (فارغ للمدير). إلغاء اعتماد الجهاز يبطل الجلسة فورًا. */
+    deviceId: uuid('device_id').references((): AnyPgColumn => devices.id, { onDelete: 'cascade' }),
+    /** آخر إثبات لامتلاك مفتاح الجهاز صالح حتى هذا الوقت (عمر قصير، يُجدَّد تلقائيًا). */
+    proofExpiresAt: timestamp('proof_expires_at', { withTimezone: true }),
+    /** وقت انتهاء فتح لوحة الإدارة بكلمة مرور الإدارة لهذه الجلسة. */
+    adminUnlockedUntil: timestamp('admin_unlocked_until', { withTimezone: true }),
     userAgent: text('user_agent'),
     ip: text('ip'),
     createdAt: createdAt(),
   },
   (t) => [index('sessions_user_idx').on(t.userId)],
+);
+
+// ---------- ربط الحساب بجهاز واحد ----------
+
+export const devicePlatform = pgEnum('device_platform', ['web', 'android', 'ios']);
+export const deviceStatus = pgEnum('device_status', ['active', 'revoked']);
+
+/**
+ * الأجهزة المعتمدة. كل جهاز يُعرَّف بمفتاح عام (ECDSA P-256)، ومفتاحه الخاص لا يغادر الجهاز.
+ * جهاز واحد فعّال فقط لكل حساب (فهرس فريد جزئي).
+ */
+export const devices = pgTable(
+  'devices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** SPKI بصيغة base64url */
+    publicKey: text('public_key').notNull(),
+    /** SHA-256 للمفتاح العام */
+    keyId: text('key_id').notNull(),
+    platform: devicePlatform('platform').notNull().default('web'),
+    label: text('label'),
+    userAgent: text('user_agent'),
+    status: deviceStatus('status').notNull().default('active'),
+    /** من وافق على هذا الجهاز (فارغ = اعتماد تلقائي عند أول تسجيل). */
+    approvedById: uuid('approved_by_id').references(() => users.id, { onDelete: 'set null' }),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedById: uuid('revoked_by_id').references(() => users.id, { onDelete: 'set null' }),
+    revokeReason: text('revoke_reason'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('devices_one_active_per_user').on(t.userId).where(sql`${t.status} = 'active'`),
+    index('devices_user_idx').on(t.userId),
+  ],
+);
+
+export const deviceRequestStatus = pgEnum('device_request_status', ['pending', 'approved', 'rejected', 'superseded']);
+
+/** طلبات نقل الحساب إلى جهاز جديد؛ تُنشأ فقط بعد كلمة مرور صحيحة وتوقيع من مفتاح الجهاز الجديد. */
+export const deviceRequests = pgTable(
+  'device_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    publicKey: text('public_key').notNull(),
+    keyId: text('key_id').notNull(),
+    platform: devicePlatform('platform').notNull().default('web'),
+    label: text('label'),
+    userAgent: text('user_agent'),
+    ip: text('ip'),
+    status: deviceRequestStatus('status').notNull().default('pending'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decidedById: uuid('decided_by_id').references(() => users.id, { onDelete: 'set null' }),
+    note: text('note'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('device_requests_one_pending').on(t.userId).where(sql`${t.status} = 'pending'`),
+    index('device_requests_status_idx').on(t.status, t.createdAt),
+  ],
+);
+
+/** تحديات لمرة واحدة لإثبات امتلاك مفتاح الجهاز (عمرها دقيقتان). */
+export const deviceChallenges = pgTable('device_challenges', {
+  id: text('id').primaryKey(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: createdAt(),
+});
+
+/**
+ * تراخيص التشغيل دون اتصال (للتطبيق الأصلي لاحقًا). كل ترخيص مرتبط بجهاز ومحاضرة،
+ * ومدته لا تتجاوز 7 أيام من آخر تجديد. إلغاء الجهاز يلغي تراخيصه على الخادم فورًا،
+ * لكن الجهاز غير المتصل يبقى قادرًا على التشغيل حتى انتهاء مدة ترخيصه المخزّن.
+ */
+export const offlineLicenses = pgTable(
+  'offline_licenses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    deviceId: uuid('device_id')
+      .notNull()
+      .references(() => devices.id, { onDelete: 'cascade' }),
+    lectureId: uuid('lecture_id')
+      .notNull()
+      .references(() => lectures.id, { onDelete: 'cascade' }),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [index('offline_licenses_device_idx').on(t.deviceId)],
 );
 
 export const passwordResetTokens = pgTable('password_reset_tokens', {
@@ -301,3 +403,5 @@ export type Teacher = typeof teachers.$inferSelect;
 export type Subject = typeof subjects.$inferSelect;
 export type Lecture = typeof lectures.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;
+export type Device = typeof devices.$inferSelect;
+export type DeviceRequest = typeof deviceRequests.$inferSelect;

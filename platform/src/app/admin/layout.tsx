@@ -4,12 +4,18 @@ import { AdminNav } from '@/components/admin-nav';
 import { Logo } from '@/components/logo';
 import { logoutAction } from '@/server/actions/auth';
 import { requireAdmin } from '@/server/auth/session';
+import { count, eq } from 'drizzle-orm';
+import { db, schema } from '@/server/db';
 
 export const metadata: Metadata = { title: { default: 'لوحة الإدارة', template: '%s | إدارة الوسيط' }, robots: { index: false } };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
+  const [{ pending }] = await db
+    .select({ pending: count() })
+    .from(schema.deviceRequests)
+    .where(eq(schema.deviceRequests.status, 'pending'));
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="sticky top-0 z-30 bg-ink text-white lg:h-dvh print:hidden">
@@ -20,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Link>
             <span className="badge rounded-md bg-amber/20 text-amber lg:hidden">إدارة</span>
           </div>
-          <AdminNav />
+          <AdminNav pendingDevices={Number(pending)} />
           <div className="mt-auto hidden flex-col gap-2 border-t border-white/10 pt-4 text-sm lg:flex">
             <p className="truncate text-white/60" dir="ltr">
               {admin.email}
