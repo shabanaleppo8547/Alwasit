@@ -111,8 +111,11 @@ export async function seedIfEmpty(sql) {
 
 // تشغيل مباشر: node scripts/seed.mjs
 if (import.meta.url === `file://${process.argv[1]}`) {
+  try {
+    process.loadEnvFile?.('.env');
+  } catch {}
   const postgres = (await import('postgres')).default;
-  const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false });
+  const sql = postgres(process.env.DATABASE_URL || process.env.POSTGRES_URL, { max: 1, prepare: false });
   try {
     await seedIfEmpty(sql);
   } finally {

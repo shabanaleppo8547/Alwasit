@@ -4,16 +4,16 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.12"
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node --env-file-if-exists=.env scripts/migrate.mjs && next build",
+    "build": "node scripts/migrate.mjs && next build",
     "build:app": "next build",
     "start": "next start",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
-    "db:seed": "node --env-file-if-exists=.env scripts/seed.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:seed": "node scripts/seed.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/unit/*.test.ts",
     "test:e2e": "node tests/e2e/run.mjs"

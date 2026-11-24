@@ -7,7 +7,7 @@ type Db = PostgresJsDatabase<typeof schema>;
 const globalForDb = globalThis as unknown as { __alwasitDb?: Db };
 
 function createDb(): Db {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
   if (!url) {
     throw new Error('DATABASE_URL غير مضبوط. أضفه في إعدادات Vercel أو ملف .env (انظر .env.example).');
   }

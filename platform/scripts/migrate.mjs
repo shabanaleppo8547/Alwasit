@@ -5,10 +5,16 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { seedIfEmpty } from './seed.mjs';
 
-const url = process.env.DATABASE_URL;
+// ملف .env للتطوير المحلي فقط (على Vercel تأتي المتغيرات من الإعدادات).
+try {
+  process.loadEnvFile?.('.env');
+} catch {}
+
+// Neon/Supabase على Vercel قد يضبطان POSTGRES_URL بدل DATABASE_URL.
+const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
 if (!url) {
   console.error(
-    '\n✗ DATABASE_URL غير مضبوط.\n  على Vercel: Storage ← Neon ← Connect للمشروع، ثم أعد النشر.\n  محليًا: انسخ .env.example إلى .env.\n',
+    '\n✗ DATABASE_URL (أو POSTGRES_URL) غير مضبوط.\n  على Vercel: Storage ← Neon ← Connect للمشروع، ثم أعد النشر.\n  محليًا: انسخ .env.example إلى .env.\n',
   );
   process.exit(1);
 }
