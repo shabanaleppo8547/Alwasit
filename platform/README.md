@@ -40,7 +40,7 @@
 3. افتح **Environment Variables** وأضف:
    - `ADMIN_EMAILS` = بريدات حسابات الإدارة مفصولة بفواصل.
    - `ADMIN_PASSWORD` = كلمة مرور الإدارة (تُطلب بعد تسجيل الدخول بحساب مدير).
-   - `APP_URL` = رابط المشروع، مثل `https://alwasit-platform.vercel.app` (تعرفه بعد أول نشر، ويمكن تعديله لاحقًا).
+   - `APP_URL` = رابط المشروع، مثل `https://alwasit-platform.vercel.app`.
 4. اضغط **Deploy**. سيفشل أول نشر برسالة `DATABASE_URL غير مضبوط`، وهذا متوقع.
 5. من صفحة المشروع: **Storage** ← **Create Database** ← **Neon (Postgres)** ← الخطة المجانية ← **Create** ← **Connect** للمشروع. هذه الخطوة تضيف `DATABASE_URL` تلقائيًا.
 6. **Deployments** ← النقاط الثلاث بجانب آخر نشر ← **Redeploy**. سيُنشئ البناء الجداول ويضيف البيانات الأولية تلقائيًا.
